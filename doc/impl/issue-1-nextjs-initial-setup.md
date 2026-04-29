@@ -19,6 +19,9 @@ npx create-next-app@latest frontend \
 
 `--no-src-dir` を選ぶ理由: ディレクトリ構成が `app/` 直下になるためです（画面定義書 §2 と合わせる）。
 
+> **`AGENTS.md` について**  
+> `create-next-app` 実行時に `AGENTS.md` が自動生成される。AI コーディングエージェント向けの注意書きファイルのため、削除しないこと。
+
 ---
 
 ## Step 2 — ディレクトリ構成の整備
@@ -190,8 +193,9 @@ Phase 1〜4 で必要な環境変数をすべて列挙します。
 ```bash
 # Auth.js v5
 AUTH_SECRET=your_secret_here
-GOOGLE_CLIENT_ID=your_google_client_id
-GOOGLE_CLIENT_SECRET=your_google_client_secret
+AUTH_GOOGLE_ID=your_google_client_id
+AUTH_GOOGLE_SECRET=your_google_client_secret
+# AUTH_URL=https://<Cloud Run ドメイン>  # 本番環境では明示が必要
 
 # Spring Boot API（バックエンド）
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
