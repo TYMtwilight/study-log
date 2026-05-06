@@ -364,6 +364,15 @@ jobs:
 
 TestContainers は Docker を使って自前で PostgreSQL コンテナを起動するため、GitHub Actions の `services` コンテナは不要。`ubuntu-latest` では Docker が標準で利用できる。
 
+> **注意: `gradlew` の実行権限**
+>
+> Windows でリポジトリを作成すると `gradlew` に実行ビットが付かない。Linux ランナーで `./gradlew: Permission denied`（exit code 126）が発生した場合は、以下のコマンドで Git インデックス上のパーミッションを修正してコミットする。
+>
+> ```bash
+> git update-index --chmod=+x backend/gradlew
+> git commit -m "chore: gradlew に実行権限を付与する"
+> ```
+
 ```yaml
 name: Backend CI
 
