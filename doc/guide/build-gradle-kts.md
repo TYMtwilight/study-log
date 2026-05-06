@@ -66,8 +66,10 @@ dependencies {
     runtimeOnly("org.postgresql:r2dbc-postgresql")
     annotationProcessor("org.projectlombok:lombok")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.springframework.boot:spring-boot-testcontainers")
     testImplementation("org.testcontainers:junit-jupiter")
     testImplementation("org.testcontainers:postgresql")
+    testImplementation("org.testcontainers:r2dbc")
     testImplementation("io.projectreactor:reactor-test")
     testImplementation("org.springframework.batch:spring-batch-test")
     testImplementation("org.springframework.security:spring-security-test")
@@ -236,8 +238,10 @@ repositories {
 | ライブラリ | 用途 |
 |-----------|------|
 | `spring-boot-starter-test` | JUnit 5 / Mockito / AssertJ など、Spring Boot のテストに必要なライブラリをまとめて追加する |
-| `org.testcontainers:junit-jupiter` | TestContainers を JUnit 5 から使うためのブリッジ |
+| `spring-boot-testcontainers` | `@ServiceConnection` などの Spring Boot ↔ TestContainers 統合機能を提供する。接続情報を自動でアプリに注入してくれるため、テスト用 `application.yml` でホスト・ポートを手書きする必要がない |
+| `org.testcontainers:junit-jupiter` | TestContainers を JUnit 5 から使うためのブリッジ（`@Testcontainers` / `@Container` アノテーションを有効化する） |
 | `org.testcontainers:postgresql` | テスト時に PostgreSQL の Docker コンテナを自動起動する。本物のDBを使った統合テストができる |
+| `org.testcontainers:r2dbc` | TestContainers が起動したコンテナに R2DBC で接続するためのブリッジ。`spring-boot-testcontainers` と組み合わせて R2DBC の接続情報を自動注入する |
 | `io.projectreactor:reactor-test` | WebFlux（リアクティブ）のテストユーティリティ（`StepVerifier` など） |
 | `spring-batch-test` | Spring Batch のジョブ・ステップ単位でのテストユーティリティ |
 | `spring-security-test` | `@WithMockUser` などの Spring Security テスト用ユーティリティ |
