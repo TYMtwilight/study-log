@@ -147,7 +147,75 @@ frontend/
 
 ---
 
-## Step 2 — バックエンド: SpotBugs プラグイン追加
+## Step 2 — バックエンド: TestContainers セットアップ
+
+### TestContainers とは
+
+テストコードから Docker コンテナを起動・停止できる Java ライブラリ。テスト時に「本物の PostgreSQL」を使いたいとき、従来は以下の2択しかなかった。
+
+| 方法 | 問題点 |
+| --- | --- |
+| モック（偽のDB）を使う | 本番と動作が違う。見つかるはずのバグを見落とす |
+| 外部のDBサーバーを用意する | 環境ごとに接続情報が違う。CI での管理が面倒 |
+
+TestContainers を使うとテスト実行時に Docker コンテナが自動で立ち上がり、テスト終了後に自動で消えるため、両方の問題が解決する。
+
+**`@ServiceConnection` について**
+
+Spring Boot 3.1 で追加された仕組み。TestContainers が起動したコンテナの接続情報（ホスト・ポート・DB名・パスワード）を Spring Boot に自動で注入する。`application.yml` にテスト用の接続情報を手書きしなくて済む。
+
+```
+テスト実行
+  ↓
+@Container で postgres コンテナ起動（Docker）
+  ↓
+@ServiceConnection が接続情報を自動注入
+  ↓
+Spring Boot アプリが本物の PostgreSQL に接続してテスト
+  ↓
+テスト終了 → コンテナ自動削除
+```
+
+---
+
+### 2-1. 依存ライブラリの追加
+
+`backend/build.gradle.kts` の `dependencies` ブロックに追記する。
+
+```kotlin
+testImplementation("org.springframework.boot:spring-boot-testcontainers")
+testImplementation("org.testcontainers:r2dbc")
+```
+
+| ライブラリ | 用途 |
+| --- | --- |
+| `spring-boot-testcontainers` | `@ServiceConnection` で TestContainers が起動したコンテナの接続情報を Spring Boot に自動注入する |
+| `testcontainers:r2dbc` | R2DBC 経由の接続情報を自動注入するためのブリッジ |
+
+### 2-2. テストクラスの更新
+
+`StudyLogApiApplicationTests.java` を `@ServiceConnection` を使ったスタイルに書き換える。
+
+```java
+@SpringBootTest
+@Testcontainers
+class StudyLogApiApplicationTests {
+
+    @Container
+    @ServiceConnection
+    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
+
+    @Test
+    void contextLoads() {
+    }
+}
+```
+
+`@ServiceConnection` を付けることで、TestContainers が起動した PostgreSQL コンテナの接続情報（ホスト・ポート・DB名・認証情報）が Spring Boot に自動注入される。`application.yml` にテスト用の接続情報を手書きする必要がなくなる。
+
+---
+
+## Step 3 — バックエンド: SpotBugs プラグイン追加
 
 `backend/build.gradle.kts` の `plugins` ブロックに追記する。
 
@@ -189,7 +257,7 @@ tasks.withType<com.github.spotbugs.snom.SpotBugsTask> {
 
 ---
 
-## Step 3 — フロントエンド CI ワークフロー作成
+## Step 4 — フロントエンド CI ワークフロー作成
 
 `.github/workflows/frontend-ci.yml` を作成する。
 
@@ -290,7 +358,7 @@ jobs:
 
 ---
 
-## Step 4 — バックエンド CI ワークフロー作成
+## Step 5 — バックエンド CI ワークフロー作成
 
 `.github/workflows/backend-ci.yml` を作成する。
 
@@ -373,7 +441,7 @@ jobs:
 
 ---
 
-## Step 5 — Branch Protection Rule 設定
+## Step 6 — Branch Protection Rule 設定
 
 GitHub リポジトリの **Settings > Branches** から `main` ブランチの保護ルールを設定する。
 
@@ -397,8 +465,8 @@ GitHub リポジトリの **Settings > Branches** から `main` ブランチの�
 ```
 .github/
 └── workflows/
-    ├── frontend-ci.yml          # 新規作成（Step 3）
-    └── backend-ci.yml           # 新規作成（Step 4）
+    ├── frontend-ci.yml          # 新規作成（Step 4）
+    └── backend-ci.yml           # 新規作成（Step 5）
 frontend/
 ├── package.json                 # scripts 追記（Step 1-3）
 ├── jest.config.ts               # 新規作成（Step 1-1）
@@ -407,8 +475,9 @@ frontend/
 └── e2e/
     └── .gitkeep                 # 新規作成（Step 1-2）
 backend/
-├── build.gradle.kts             # SpotBugs プラグイン追記（Step 2）
+├── build.gradle.kts             # TestContainers 依存追加（Step 2-1）、SpotBugs プラグイン追記（Step 3）
+├── src/test/java/.../StudyLogApiApplicationTests.java  # @ServiceConnection スタイルに更新（Step 2-2）
 └── config/
     └── spotbugs/
-        └── exclude.xml          # 新規作成（Step 2）
+        └── exclude.xml          # 新規作成（Step 3）
 ```

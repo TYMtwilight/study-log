@@ -26,9 +26,6 @@ spring:
 
   # Flyway（マイグレーション）
   flyway:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:studylog}
-    user: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:postgres}
     locations: classpath:db/migration
 
 # Actuator
