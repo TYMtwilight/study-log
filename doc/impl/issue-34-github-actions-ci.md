@@ -145,6 +145,43 @@ frontend/
 }
 ```
 
+### 1-4. プレースホルダーテストの追加
+
+Jest・Playwright ともにテストファイルが 1 件も存在しない状態で CI を実行すると `Error: No tests found` でジョブが失敗する。ログインページの実装前にCIを通過させるため、プレースホルダーとして最小限のファイルを追加する。
+
+**`frontend/app/login/page.tsx`** を作成する。
+
+```tsx
+export default function LoginPage() {
+  return <div>ログイン</div>
+}
+```
+
+**`frontend/app/login/page.test.tsx`** を作成する。`LoginPage` が「ログイン」というテキストを描画することだけを確認する Jest テスト。
+
+```tsx
+import { render, screen } from '@testing-library/react'
+import LoginPage from './page'
+
+test('ログインページが表示される', () => {
+  render(<LoginPage />)
+  expect(screen.getByText('ログイン')).toBeInTheDocument()
+})
+```
+
+**`frontend/e2e/login.spec.ts`** を作成する（`e2e/.gitkeep` は不要になるため削除する）。DOM 構造に依存しないよう URL のみ確認する。
+
+```ts
+import { test, expect } from '@playwright/test'
+
+test('ログインページが表示される', async ({ page }) => {
+  await page.goto('/login')
+  await expect(page).toHaveURL(/\/login/)
+})
+```
+
+> ログイン画面を本実装した際は、見出し・説明文・「Google でログイン」ボタンの表示確認、および未認証時の `/login` へのリダイレクト確認をテストに追加する。
+
 ---
 
 ## Step 2 — バックエンド: TestContainers セットアップ
@@ -473,8 +510,12 @@ frontend/
 ├── jest.config.ts               # 新規作成（Step 1-1）
 ├── jest.setup.ts                # 新規作成（Step 1-1）
 ├── playwright.config.ts         # 新規作成（Step 1-2）
+├── app/
+│   └── login/
+│       ├── page.tsx             # 新規作成（Step 1-4）プレースホルダー
+│       └── page.test.tsx        # 新規作成（Step 1-4）プレースホルダー
 └── e2e/
-    └── .gitkeep                 # 新規作成（Step 1-2）
+    └── login.spec.ts            # 新規作成（Step 1-4）プレースホルダー（.gitkeep の代替）
 backend/
 ├── build.gradle.kts             # TestContainers 依存追加（Step 2-1）、SpotBugs プラグイン追記（Step 3）
 ├── src/test/java/.../StudyLogApiApplicationTests.java  # @ServiceConnection スタイルに更新（Step 2-2）
