@@ -26,14 +26,8 @@ name: Backend CI
 on:
   push:
     branches: [main]
-    paths:
-      - "backend/**"
-      - ".github/workflows/backend-ci.yml"
   pull_request:
     branches: [main]
-    paths:
-      - "backend/**"
-      - ".github/workflows/backend-ci.yml"
 
 defaults:
   run:
@@ -130,14 +124,8 @@ GitHub の Actions タブに表示される名前です。`frontend-ci.yml` と�
 on:
   push:
     branches: [main]
-    paths:
-      - "backend/**"
-      - ".github/workflows/backend-ci.yml"
   pull_request:
     branches: [main]
-    paths:
-      - "backend/**"
-      - ".github/workflows/backend-ci.yml"
 ```
 
 **`push`** と **`pull_request`** の 2 種類のタイミングで実行します。
@@ -147,16 +135,10 @@ on:
 | `push` | main ブランチへの直接プッシュ時 |
 | `pull_request` | main ブランチへの PR 作成・更新時 |
 | `branches: [main]` | main ブランチへの変更だけを対象にする |
-| `paths` | 指定したパスのファイルが変更されたときだけ実行する |
 
-**`paths` の効果:**
+**`paths` フィルターを使わない理由:**
 
-`backend/` 以下のファイル、またはこのワークフローファイル自体が変更されたときだけ CI が動きます。フロントエンドだけ変更した PR ではバックエンド CI はスキップされます。
-
-```
-backend/src/Main.java を変更          → ✅ CI が動く
-frontend/app/page.tsx を変更          → ❌ CI はスキップ
-```
+`paths` フィルターを設定すると、対象外のファイルしか変更していない PR ではワークフロー自体が起動しません。Branch Protection Rule で Required として設定されたチェックはステータスを報告されないと「Waiting for status to be reported」のまま残り、マージがブロックされます。この競合を避けるため、すべての PR で CI が起動するようにしています。
 
 ---
 

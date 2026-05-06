@@ -261,20 +261,18 @@ tasks.withType<com.github.spotbugs.snom.SpotBugsTask> {
 
 `.github/workflows/frontend-ci.yml` を作成する。
 
+> **注意: `paths` フィルターと Required status checks の競合**
+>
+> `paths` フィルターを設定すると、対象外のファイルしか変更していない PR ではワークフロー自体が起動しない。Git HubのSettingsで設定するBranch Protection Rule で Required として設定されたチェックはステータスを報告されないと「Waiting for status to be reported」のまま残り、マージがブロックされる。この競合を避けるため、`paths` フィルターは設定しない。
+
 ```yaml
 name: Frontend CI
 
 on:
   push:
     branches: [main]
-    paths:
-      - "frontend/**"
-      - ".github/workflows/frontend-ci.yml"
   pull_request:
     branches: [main]
-    paths:
-      - "frontend/**"
-      - ".github/workflows/frontend-ci.yml"
 
 defaults:
   run:
@@ -379,14 +377,8 @@ name: Backend CI
 on:
   push:
     branches: [main]
-    paths:
-      - "backend/**"
-      - ".github/workflows/backend-ci.yml"
   pull_request:
     branches: [main]
-    paths:
-      - "backend/**"
-      - ".github/workflows/backend-ci.yml"
 
 defaults:
   run:
