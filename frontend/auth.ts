@@ -15,18 +15,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
   // callbacks: Auth.js の処理の各タイミングに割り込む関数を設定
   callbacks: {
-    // アクセス制御のタイミング
+    // アクセス制御のタイミングでログイン済みか未ログインかをBoolean値で返す
     authorized({ auth }) {
       return !!auth
     },
-    // JWT を作る・更新するタイミング
+    // JWT を作る・更新するタイミングで user.id をトークンに保存する
     jwt({ token, user }) {
       if (user) {
         token.id = user.id
       }
       return token
     },
-    // クライアントが現在のセッション情報を要求するタイミング
+    // クライアントが現在のセッション情報を要求するタイミングで
+    // トークンの user.id をセッションオブジェクトに伝播する
     session({ session, token }) {
       session.user.id = token.id as string
       return session
