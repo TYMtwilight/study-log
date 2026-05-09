@@ -1,6 +1,8 @@
 import type { DefaultSession } from 'next-auth'
 
-// Auth.js のデフォルト Session 型を拡張する（モジュール拡張）
+// Google OAuthは認証後にユーザー情報（名前・メール・画像・ID）を返す
+// Auth.js がデフォルトで session.user に含めるのは name、email、image の3つだけなので、
+// Auth.js がGoogle OAuthからIDを受け取れるよう、デフォルト Session 型を拡張する（モジュール拡張）
 declare module 'next-auth' {
   interface Session {
     user: {
