@@ -25,5 +25,8 @@ export default defineConfig({
     timeout: 120_000,
     stdout: 'ignore',
     stderr: 'pipe',
+    env: {
+      AUTH_TRUST_HOST: 'true',
+    },
   },
 })
