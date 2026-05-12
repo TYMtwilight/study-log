@@ -7,6 +7,8 @@ const createJestConfig = nextJest({
 
 const config: Config = {
   coverageProvider: 'v8',
+  // testEnvironment: 'jsdom'と書くことで、jest / describe / test / expect
+  // などが import なしで全テストファイルから使えるようになる。
   testEnvironment: 'jsdom',
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
   testMatch: ['**/*.test.{ts,tsx}'],
