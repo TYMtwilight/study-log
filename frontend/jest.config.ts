@@ -13,6 +13,11 @@ const config: Config = {
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
   testMatch: ['**/*.test.{ts,tsx}'],
   collectCoverageFrom: ['app/**/*.{ts,tsx}', '!app/**/*.d.ts'],
+  // (auth) のような括弧つきディレクトリ名を含むパスで Jest の正規表現処理が壊れるため、
+  // nextJest の自動設定に頼らず @/ エイリアスを明示する
+  moduleNameMapper: {
+    '^@/(.*)$': '<rootDir>/$1',
+  },
 }
 
 export default createJestConfig(config)
