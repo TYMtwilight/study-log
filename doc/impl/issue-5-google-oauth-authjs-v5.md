@@ -486,6 +486,99 @@ npx jest app/\(auth\)/login/page.test.tsx
 
 ---
 
+## Step 12 — E2E テスト設定
+
+### `playwright.config.ts` への `AUTH_TRUST_HOST` 追加
+
+CI（GitHub Actions）で E2E テストを実行すると、Auth.js v5 が `UntrustedHost` エラーをスローしてテストが失敗する。
+
+**原因**  
+Auth.js v5 はリクエストの `Host` ヘッダーを見て、信頼するホストかどうかを判定するセキュリティ機能を持つ。信頼するホストは `AUTH_URL` 環境変数で決まるが、CI 環境では `AUTH_URL` が未設定のため `localhost:3000` が信頼されずエラーになる。開発環境（`NODE_ENV=development`）では `localhost` が自動的に信頼されるが、CI は本番ビルドで動くため適用されない。
+
+> **なぜこの機能が存在するか**  
+> ホストヘッダーインジェクション攻撃の対策。攻撃者が `Host` ヘッダーを偽装して OAuth コールバック先を悪意のあるサーバーに差し替えるのを防ぐ。
+
+**修正**  
+`playwright.config.ts` の `webServer` に `env` を追加して `AUTH_TRUST_HOST=true` と `...process.env` を渡す。
+
+```typescript
+webServer: {
+  command: 'npm run build && npm run start',
+  url: 'http://localhost:3000',
+  reuseExistingServer: !process.env.CI,
+  timeout: 120_000,
+  stdout: 'ignore',
+  stderr: 'pipe',
+  env: {
+    ...process.env,          // CI 環境変数（AUTH_SECRET など）を WebServer へ引き継ぐ
+    AUTH_TRUST_HOST: 'true', // CI で UntrustedHost エラーを回避する
+  },
+},
+```
+
+`AUTH_TRUST_HOST=true` は「受け取るホストをすべて信頼する」という設定で、リバースプロキシや CI のように `AUTH_URL` を明示できない環境で使う。
+
+> **本番環境への影響はないか**  
+> `playwright.config.ts` はテスト実行時（`npm run test:e2e`）にしか適用されない。本番サーバー（Cloud Run）の環境変数はデプロイ設定で別途管理するため、`playwright.config.ts` の内容が本番に漏れ出ることはない。同様に `jest.config.ts` もテスト実行時にしか適用されない。
+
+### `webServer.env` と `process.env` の引き継ぎ
+
+Playwright の `webServer.env` を指定すると、`process.env`（テストランナーのプロセス環境変数）を**継承せず**、指定したオブジェクトだけが子プロセスの環境変数になる。
+
+| 状態 | WebServer が受け取る環境変数 |
+|---|---|
+| `env` を指定しない | `process.env` がそのまま引き継がれる |
+| `env: { AUTH_TRUST_HOST: 'true' }` のみ指定 | `AUTH_TRUST_HOST` のみ（`AUTH_SECRET` 等は届かない） |
+| `env: { ...process.env, AUTH_TRUST_HOST: 'true' }` | `process.env` 全体 + `AUTH_TRUST_HOST` |
+
+`...process.env` を先に展開し `AUTH_TRUST_HOST: 'true'` を後に置くことで、明示的な値が優先される。
+
+### `AUTH_SECRET` について
+
+E2E テストでも Auth.js を動かすため `AUTH_SECRET` が必要。
+
+- GitHub Actions の **Settings → Secrets and variables → Actions** で `AUTH_SECRET` を登録する
+- ワークフローで `env: AUTH_SECRET: ${{ secrets.AUTH_SECRET }}` として渡す
+- `playwright.config.ts` の `webServer.env` では `...process.env` を展開することで `AUTH_SECRET` が WebServer（Next.js）へ届く
+
+`webServer.env` に値を直書きするとリポジトリに残るため、必ずシークレット経由で渡すこと。
+
+### reporter の設定
+
+```typescript
+reporter: process.env.CI
+  ? [['github'], ['html', { open: 'never' }]]
+  : [['list'], ['html', { open: 'on-failure' }]],
+```
+
+| 環境 | レポーター | 役割 |
+|---|---|---|
+| CI | `'github'` | GitHub Actions の UI 上に失敗テストのアノテーション（赤い行番号マーカー）を出す |
+| CI | `'html'` + `{ open: 'never' }` | `playwright-report/` に HTML レポートを書き出す（アーティファクトとしてダウンロード可能になる） |
+| ローカル | `'list'` | ターミナルに結果を出力する |
+| ローカル | `'html'` + `{ open: 'on-failure' }` | テスト失敗時にブラウザで HTML レポートを自動表示する |
+
+> **`'github'` のみでは不十分な理由**  
+> `'github'` reporter は GitHub Actions のアノテーション（stdout）に出力するだけで、`playwright-report/` にファイルを書き出さない。`'html'` を組み合わせることで、ワークフローのアーティファクトとして保存・ダウンロード可能なレポートが生成される。
+
+### CI ワークフローへの `needs` 依存追加
+
+`frontend-ci.yml` の `e2e-test` ジョブに `needs: [lint-and-build]` を追加することで、ビルドが失敗した場合に E2E テストをスキップできる。
+
+```yaml
+e2e-test:
+  name: E2E Tests (Playwright)
+  needs: [lint-and-build]
+  runs-on: ubuntu-latest
+```
+
+| 状態 | `needs` なし | `needs: [lint-and-build]` あり |
+|---|---|---|
+| ビルド成功 | E2E 実行 | E2E 実行 |
+| ビルド失敗 | E2E も起動（時間・コストの無駄） | E2E をスキップ |
+
+---
+
 ## 完了条件チェック
 
 | 完了条件 | 対応ステップ |
@@ -496,4 +589,8 @@ npx jest app/\(auth\)/login/page.test.tsx
 | OAuth 認証成功後に `/` へリダイレクト | Step 7（`redirectTo: "/"` ） |
 | 認証失敗時にエラーメッセージを表示 | Step 4（`pages.error: "/login"`）、Step 7（`?error` パラメータで表示） |
 | セッション情報（name, email, image）をフロント側で取得できる | Step 9, 10 |
-| ログインページのテストコードを作成（3 ケース） | Step 11 |
+| ログインページのテストコードを作成（4 ケース） | Step 11 |
+| E2E テストで UntrustedHost エラーを回避する | Step 12 |
+| `AUTH_SECRET` を WebServer へ正しく伝播する（`...process.env`） | Step 12 |
+| CI・ローカルで HTML レポートを生成する | Step 12 |
+| E2E ジョブがビルド失敗時にスキップされる（`needs: [lint-and-build]`） | Step 12 |
