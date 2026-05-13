@@ -26,6 +26,7 @@ export default defineConfig({
     stdout: 'ignore',
     stderr: 'pipe',
     env: {
+      ...process.env,
       AUTH_TRUST_HOST: 'true',
     },
   },
