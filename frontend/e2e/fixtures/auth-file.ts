@@ -1,0 +1,1 @@
+export const authFile = 'e2e/fixtures/.auth/user.json'
