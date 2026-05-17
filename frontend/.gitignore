@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# E2E 認証フィクスチャー（セッショントークンを含む）
+e2e/fixtures/.auth/
