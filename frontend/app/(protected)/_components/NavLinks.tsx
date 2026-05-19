@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { FaBars, FaTimes } from "react-icons/fa"
 
 type NavItem = {
@@ -42,11 +42,41 @@ const NAV_ITEMS : NavItem[] = [
 
 const linkBase = 'transition-colors hover:text-gray-900'
 const linkActive = 'text-gray-900 font-semibold'
-const linkInActive = 'text-gray-900'
+const linkInactive = 'text-gray-600'
 
 export default function NavLinks() {
     const pathname = usePathname()
     const [open, setOpen] = useState(false)
+
+    // ルート変更時にドロワーを閉じる
+    const [prevPathname, setPrevPathname] = useState(pathname)
+    if (pathname !== prevPathname) {
+        setPrevPathname(pathname)
+        setOpen(false)
+    }
+
+    useEffect(() => {
+        if (!open) return
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') setOpen(false)
+        }
+        document.addEventListener('keydown', onKey)
+        return () => document.removeEventListener('keydown', onKey)
+    }, [open])
+
+    useEffect(() => {
+        if (!open) return
+        const onClickOutside = (e: MouseEvent) => {
+            // ドロワーまたはハンバーガーボタンの中ならスキップ
+            const target = e.target as HTMLElement
+            if (target.closest('#mobile-nav') || target.closest('button[aria-controls="mobile-nav"]')) {
+                return
+            }
+            setOpen(false)
+        }
+        document.addEventListener('mousedown', onClickOutside)
+        return () => document.removeEventListener('mousedown', onClickOutside)
+    }, [open])
 
     const renderLink = (item: NavItem, onClick?: () => void) => {
         const active = item.isActive(pathname)
@@ -56,7 +86,7 @@ export default function NavLinks() {
                 href={item.href}
                 aria-current={active ? 'page' : undefined}
                 onClick={onClick}
-                className={`${linkBase} ${active ? linkActive : linkInActive}`}
+                className={`${linkBase} ${active ? linkActive : linkInactive}`}
             >
                 {item.label}
             </Link>
@@ -66,7 +96,10 @@ export default function NavLinks() {
     return (
         <>
             {/* PC 用: 横並びナビゲーション */}
-            <nav className="hidden md:flex items-center gap-6 text-sm">
+            <nav 
+                aria-label="メインナビゲーション"
+                className="hidden md:flex items-center gap-6 text-sm"
+            >
                 {NAV_ITEMS.map((item) => renderLink(item))}
             </nav>
 
@@ -83,17 +116,17 @@ export default function NavLinks() {
             </button>
 
             {/* モバイル用: ドロワー（開時のみ表示） */}
-            {open && (
-                <nav
-                    id="mobile-nav"
-                    className="absolute left-0 right-0 top-full md:hidden
-                        flex flex-col gap-1 border-b bg-white px-6 py-3 text-sm shadow-sm"
-                >
-                    {NAV_ITEMS.map((item) => 
-                        renderLink(item, () => setOpen(false)),
-                    )}
-                </nav>
-            )}
+            <nav
+                id="mobile-nav"
+                aria-label="モバイルナビゲーション"
+                hidden={!open}
+                className="absolute left-0 right-0 top-full md:hidden
+                    flex flex-col gap-1 border-b bg-white px-6 py-3 text-sm shadow-sm"
+            >
+                {NAV_ITEMS.map((item) => 
+                    renderLink(item, () => setOpen(false)),
+                )}
+            </nav>
         </>
     )
 }
