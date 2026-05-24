@@ -1,0 +1,2406 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Issue #9 トースト通知コンポーネント実装手順書</title>
+  <style>
+    :root {
+      --bg:          #f1f5f9;
+      --surface:     #ffffff;
+      --surface2:    #f8fafc;
+      --border:      #e2e8f0;
+      --border2:     #cbd5e1;
+      --text:        #0f172a;
+      --text-muted:  #64748b;
+      --text-light:  #94a3b8;
+      --accent:      #6366f1;
+      --accent-dim:  #eef2ff;
+      --accent-dark: #4338ca;
+      --green:       #16a34a;
+      --green-dim:   #f0fdf4;
+      --green-border:#bbf7d0;
+      --red:         #dc2626;
+      --red-dim:     #fef2f2;
+      --red-border:  #fecaca;
+      --blue:        #2563eb;
+      --blue-dim:    #eff6ff;
+      --blue-border: #bfdbfe;
+      --amber:       #d97706;
+      --amber-dim:   #fffbeb;
+      --amber-border:#fde68a;
+      --code-bg:     #0f172a;
+      --code-text:   #e2e8f0;
+      --sidebar-w:   260px;
+      --r:           10px;
+      --r-sm:        6px;
+      --shadow:      0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.05);
+      --shadow-md:   0 4px 12px rgba(0,0,0,.10), 0 2px 4px rgba(0,0,0,.06);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans JP', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.75;
+      display: flex;
+      min-height: 100vh;
+      font-size: 15px;
+    }
+
+    /* ═══════════════════════════════════════
+       SIDEBAR
+    ═══════════════════════════════════════ */
+    #sidebar {
+      position: fixed; top: 0; left: 0;
+      width: var(--sidebar-w);
+      height: 100vh;
+      overflow-y: auto;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      z-index: 100;
+    }
+
+    #sidebar-header {
+      padding: 20px 18px 16px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .sidebar-issue {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+
+    .sidebar-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.35;
+    }
+
+    .sidebar-meta {
+      margin-top: 8px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    #toc { padding: 12px 10px; flex: 1; }
+
+    .toc-section {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-light);
+      padding: 10px 8px 4px;
+    }
+
+    .toc-link {
+      display: block;
+      padding: 5px 8px;
+      font-size: 13px;
+      color: var(--text-muted);
+      text-decoration: none;
+      border-radius: var(--r-sm);
+      transition: background .12s, color .12s;
+      line-height: 1.4;
+    }
+
+    .toc-link:hover { background: var(--accent-dim); color: var(--accent); }
+    .toc-link.active { background: var(--accent-dim); color: var(--accent); font-weight: 600; }
+    .toc-link.sub { padding-left: 20px; font-size: 12px; }
+
+    #sidebar-progress {
+      padding: 14px 18px;
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .progress-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .progress-bar {
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 2px;
+      transition: width .3s;
+      width: 0%;
+    }
+
+    /* ═══════════════════════════════════════
+       MAIN
+    ═══════════════════════════════════════ */
+    main {
+      margin-left: var(--sidebar-w);
+      max-width: 900px;
+      width: 100%;
+      padding: 0 0 100px;
+    }
+
+    /* ═══════════════════════════════════════
+       HERO
+    ═══════════════════════════════════════ */
+    #hero {
+      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #6366f1 100%);
+      padding: 48px 52px 44px;
+      color: white;
+    }
+
+    .hero-eyebrow {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      opacity: .75;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .hero-eyebrow::before {
+      content: '';
+      display: block;
+      width: 20px;
+      height: 2px;
+      background: rgba(255,255,255,.5);
+    }
+
+    #hero h1 {
+      font-size: 30px;
+      font-weight: 800;
+      line-height: 1.2;
+      letter-spacing: -.5px;
+      margin-bottom: 16px;
+    }
+
+    #hero p {
+      opacity: .85;
+      font-size: 15px;
+      max-width: 560px;
+      line-height: 1.65;
+      margin-bottom: 24px;
+    }
+
+    .hero-tags { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .hero-tag {
+      font-size: 12px;
+      font-weight: 500;
+      background: rgba(255,255,255,.15);
+      border: 1px solid rgba(255,255,255,.2);
+      padding: 4px 12px;
+      border-radius: 99px;
+    }
+
+    /* ═══════════════════════════════════════
+       WHAT YOU'LL BUILD CARDS
+    ═══════════════════════════════════════ */
+    #build-preview {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      padding: 32px 52px;
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .preview-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 16px;
+      box-shadow: var(--shadow);
+    }
+
+    .preview-card-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      margin-bottom: 10px;
+      color: var(--text-muted);
+    }
+
+    /* Mock toasts */
+    .mock-toast {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      border-radius: 8px;
+      padding: 11px 14px;
+      font-size: 13px;
+      border-left: 4px solid;
+      box-shadow: 0 2px 8px rgba(0,0,0,.08);
+    }
+
+    .mock-toast.success { background: var(--green-dim); border-color: var(--green); color: #14532d; }
+    .mock-toast.error   { background: var(--red-dim);   border-color: var(--red);   color: #7f1d1d; }
+    .mock-toast.info    { background: var(--blue-dim);  border-color: var(--blue);  color: #1e3a8a; }
+
+    .mock-toast-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+    .mock-toast-msg { flex: 1; font-weight: 500; }
+    .mock-toast-x { opacity: .4; font-size: 11px; cursor: default; }
+
+    /* ═══════════════════════════════════════
+       CONTENT SECTIONS
+    ═══════════════════════════════════════ */
+    .section { padding: 44px 52px 0; }
+
+    h2 {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      line-height: 1.3;
+    }
+
+    .h2-num {
+      width: 32px; height: 32px;
+      background: var(--accent);
+      color: white;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .section-desc {
+      color: var(--text-muted);
+      font-size: 14px;
+      margin-bottom: 24px;
+      margin-top: 4px;
+    }
+
+    h3 {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text);
+      margin: 32px 0 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    h3::before {
+      content: '';
+      display: block;
+      width: 4px; height: 18px;
+      background: var(--accent);
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+
+    h4 {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      color: var(--text-muted);
+      margin: 20px 0 8px;
+    }
+
+    p { margin-bottom: 14px; color: var(--text); line-height: 1.75; }
+
+    /* ═══════════════════════════════════════
+       DIVIDER
+    ═══════════════════════════════════════ */
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 44px 0 0;
+    }
+
+    /* ═══════════════════════════════════════
+       TABLES
+    ═══════════════════════════════════════ */
+    .table-wrap {
+      overflow-x: auto;
+      margin: 14px 0 24px;
+      border-radius: var(--r);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+    }
+
+    table { width: 100%; border-collapse: collapse; font-size: 14px; background: var(--surface); }
+
+    th {
+      background: var(--surface2);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      color: var(--text-muted);
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+    }
+
+    td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+      line-height: 1.6;
+    }
+
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--surface2); }
+
+    /* ═══════════════════════════════════════
+       CODE BLOCKS
+    ═══════════════════════════════════════ */
+    .code-block {
+      margin: 14px 0 24px;
+      border-radius: var(--r);
+      overflow: hidden;
+      box-shadow: var(--shadow-md);
+    }
+
+    .code-header {
+      background: #1e293b;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .code-dots { display: flex; gap: 5px; }
+    .code-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+    }
+    .code-dot.r { background: #ff5f57; }
+    .code-dot.y { background: #ffbd2e; }
+    .code-dot.g { background: #28c840; }
+
+    .code-filename {
+      font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+      font-size: 12px;
+      color: #94a3b8;
+      flex: 1;
+    }
+
+    .code-lang {
+      font-size: 10px;
+      font-weight: 600;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+
+    pre {
+      background: var(--code-bg);
+      color: var(--code-text);
+      padding: 20px 22px;
+      font-size: 13px;
+      line-height: 1.7;
+      overflow-x: auto;
+      margin: 0;
+    }
+
+    code { font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', 'Consolas', monospace; }
+
+    :not(pre) > code {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-size: 13px;
+      color: var(--accent);
+    }
+
+    /* Syntax tokens */
+    .kw  { color: #7dd3fc; }
+    .st  { color: #86efac; }
+    .ty  { color: #fcd34d; }
+    .fn  { color: #c4b5fd; }
+    .cm  { color: #475569; font-style: italic; }
+    .nu  { color: #fb923c; }
+    .op  { color: #94a3b8; }
+    .hl  { background: rgba(99,102,241,.15); display: block; margin: 0 -22px; padding: 0 22px; }
+
+    /* ═══════════════════════════════════════
+       CALLOUTS
+    ═══════════════════════════════════════ */
+    .callout {
+      border-radius: var(--r);
+      padding: 16px 20px;
+      margin: 16px 0 24px;
+      font-size: 14px;
+      border: 1px solid;
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      line-height: 1.65;
+    }
+
+    .callout.info   { background: var(--blue-dim);  border-color: var(--blue-border); color: #1e3a8a; }
+    .callout.ok     { background: var(--green-dim); border-color: var(--green-border); color: #14532d; }
+    .callout.warn   { background: var(--amber-dim); border-color: var(--amber-border); color: #78350f; }
+    .callout.tip    { background: var(--accent-dim); border-color: #c7d2fe; color: #3730a3; }
+
+    .callout-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+    .callout-body { flex: 1; }
+    .callout-title { font-weight: 700; margin-bottom: 4px; display: block; }
+    .callout strong { font-weight: 700; }
+
+    /* ═══════════════════════════════════════
+       BADGES
+    ═══════════════════════════════════════ */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 9px;
+      border-radius: 99px;
+    }
+
+    .badge.new    { background: #dcfce7; color: #15803d; }
+    .badge.update { background: #dbeafe; color: #1d4ed8; }
+    .badge.client { background: #ede9fe; color: #6d28d9; }
+    .badge.server { background: #fef3c7; color: #b45309; }
+    .badge.test   { background: #f1f5f9; color: #475569; border: 1px solid var(--border); }
+
+    /* ═══════════════════════════════════════
+       ARCHITECTURE DIAGRAM
+    ═══════════════════════════════════════ */
+    .arch-diagram {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 24px;
+      margin: 14px 0 24px;
+      box-shadow: var(--shadow);
+    }
+
+    .arch-tree {
+      font-family: 'SF Mono', 'Cascadia Code', monospace;
+      font-size: 13px;
+      line-height: 2;
+    }
+
+    .arch-node {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 2px 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .arch-node.provider { background: #ede9fe; color: #6d28d9; }
+    .arch-node.server   { background: #fef3c7; color: #b45309; }
+    .arch-node.client   { background: #dbeafe; color: #1d4ed8; }
+    .arch-node.page     { background: var(--surface2); color: var(--text-muted); border: 1px solid var(--border); }
+
+    .arch-line { color: var(--text-light); }
+    .arch-label { font-size: 12px; color: var(--text-muted); font-family: inherit; font-weight: 400; }
+
+    .arch-flow {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin: 20px 0 8px;
+      flex-wrap: wrap;
+      gap: 2px;
+    }
+
+    .flow-box {
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      text-align: center;
+      min-width: 110px;
+    }
+
+    .flow-arrow {
+      font-size: 18px;
+      color: var(--text-light);
+      padding: 0 4px;
+    }
+
+    /* ═══════════════════════════════════════
+       STEPS
+    ═══════════════════════════════════════ */
+    .steps-container { position: relative; }
+
+    .step {
+      display: grid;
+      grid-template-columns: 44px 1fr;
+      gap: 0 20px;
+      margin-bottom: 0;
+    }
+
+    .step-left {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .step-circle {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: white;
+      font-size: 15px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 0 0 4px var(--accent-dim);
+      z-index: 1;
+    }
+
+    .step-line {
+      width: 2px;
+      flex: 1;
+      background: linear-gradient(to bottom, var(--accent), var(--border));
+      margin-top: 8px;
+      min-height: 40px;
+    }
+
+    .step:last-child .step-line { display: none; }
+
+    .step-content {
+      padding-bottom: 40px;
+    }
+
+    .step-title {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.3;
+      margin-top: 5px;
+      margin-bottom: 10px;
+    }
+
+    /* ═══════════════════════════════════════
+       CHECKLIST
+    ═══════════════════════════════════════ */
+    .checklist { list-style: none; margin: 8px 0 24px; }
+
+    .checklist li {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 10px 14px;
+      border-radius: var(--r-sm);
+      cursor: pointer;
+      transition: background .1s;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .checklist li:last-child { border-bottom: none; }
+    .checklist li:hover { background: var(--surface2); }
+    .checklist li.done .chk-label { color: var(--text-muted); text-decoration: line-through; }
+
+    .chk-box {
+      width: 18px; height: 18px;
+      border: 2px solid var(--border2);
+      border-radius: 4px;
+      flex-shrink: 0;
+      margin-top: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      transition: background .15s, border-color .15s;
+    }
+
+    .done .chk-box {
+      background: var(--green);
+      border-color: var(--green);
+      color: white;
+    }
+
+    .chk-label { font-size: 14px; line-height: 1.5; }
+
+    /* ═══════════════════════════════════════
+       API QUICK REFERENCE
+    ═══════════════════════════════════════ */
+    .api-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      margin-bottom: 12px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .api-card-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .api-fn-name {
+      font-family: 'SF Mono', 'Cascadia Code', monospace;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .api-fn-sig {
+      font-family: 'SF Mono', 'Cascadia Code', monospace;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .api-card-body { padding: 12px 16px; font-size: 14px; }
+    .api-card-body p { margin-bottom: 6px; }
+
+    /* ═══════════════════════════════════════
+       BEFORE / AFTER
+    ═══════════════════════════════════════ */
+    .before-after {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin: 14px 0 24px;
+    }
+
+    .ba-panel {
+      border-radius: var(--r);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+    }
+
+    .ba-header {
+      padding: 8px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .ba-header.before { background: #fef2f2; color: var(--red); border-bottom: 1px solid #fecaca; }
+    .ba-header.after  { background: #f0fdf4; color: var(--green); border-bottom: 1px solid var(--green-border); }
+
+    /* ═══════════════════════════════════════
+       FOOTER
+    ═══════════════════════════════════════ */
+    #footer {
+      margin: 44px 52px 0;
+      padding: 20px 0;
+      border-top: 1px solid var(--border);
+      font-size: 13px;
+      color: var(--text-muted);
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    /* ═══════════════════════════════════════
+       UTILS
+    ═══════════════════════════════════════ */
+    ul.prose { padding-left: 22px; margin-bottom: 14px; }
+    ul.prose li { margin: 5px 0; font-size: 14px; line-height: 1.65; }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     SIDEBAR
+══════════════════════════════════════════ -->
+<nav id="sidebar">
+  <div id="sidebar-header">
+    <div class="sidebar-issue">Issue #9 · Phase 1</div>
+    <div class="sidebar-title">トースト通知<br>コンポーネント実装</div>
+    <div class="sidebar-meta">React 19 · Next.js 16 · 2026-05-20</div>
+  </div>
+
+  <div id="toc">
+    <div class="toc-section">概要</div>
+    <a class="toc-link" href="#sec-overview">完了条件の確認</a>
+    <a class="toc-link" href="#sec-files">実装ファイル一覧</a>
+
+    <div class="toc-section">設計方針</div>
+    <a class="toc-link" href="#sec-arch">アーキテクチャ</a>
+    <a class="toc-link sub" href="#sec-context-pattern">Context パターン</a>
+    <a class="toc-link sub" href="#sec-boundary">Server / Client 境界</a>
+    <a class="toc-link sub" href="#sec-a11y">アクセシビリティ</a>
+    <a class="toc-link sub" href="#sec-dismiss">自動消滅</a>
+
+    <div class="toc-section">実装</div>
+    <a class="toc-link" href="#sec-impl">実装ステップ</a>
+    <a class="toc-link sub" href="#step1">Step 1 — ToastContext</a>
+    <a class="toc-link sub" href="#step2">Step 2 — Toaster</a>
+    <a class="toc-link sub" href="#step3">Step 3 — layout 更新</a>
+    <a class="toc-link sub" href="#step4">Step 4 — 単体テスト</a>
+
+    <div class="toc-section">確認・参考</div>
+    <a class="toc-link" href="#sec-verify">動作確認手順</a>
+    <a class="toc-link" href="#sec-api">API クイックリファレンス</a>
+    <a class="toc-link" href="#sec-checklist">実装チェックリスト</a>
+    <a class="toc-link" href="#sec-phase4">Phase 4 連携メモ</a>
+  </div>
+
+  <div id="sidebar-progress">
+    <div class="progress-label">
+      <span>読み進め度</span>
+      <span id="progress-pct">0%</span>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+  </div>
+</nav>
+
+<!-- ══════════════════════════════════════════
+     MAIN
+══════════════════════════════════════════ -->
+<main>
+
+  <!-- ── HERO ── -->
+  <div id="hero">
+    <div class="hero-eyebrow">実装手順書</div>
+    <h1>トースト通知<br>コンポーネント</h1>
+    <p>
+      CRUD 操作の成功・失敗、SSE イベント受信時に画面右上にトーストを表示するコンポーネント基盤を構築する。
+      React 19 の <code style="background:rgba(255,255,255,.15);border:none;color:white;padding:1px 6px;border-radius:4px;">use()</code> フックと Context パターンを採用し、
+      アプリ全体から <code style="background:rgba(255,255,255,.15);border:none;color:white;padding:1px 6px;border-radius:4px;">useToast()</code> 一発で呼び出せる仕組みを作る。
+    </p>
+    <div class="hero-tags">
+      <span class="hero-tag">React 19</span>
+      <span class="hero-tag">Next.js 16 App Router</span>
+      <span class="hero-tag">TypeScript</span>
+      <span class="hero-tag">Tailwind CSS v4</span>
+      <span class="hero-tag">Jest + Testing Library</span>
+    </div>
+  </div>
+
+  <!-- ── WHAT YOU'LL BUILD ── -->
+  <div id="build-preview">
+    <div class="preview-card">
+      <div class="preview-card-label">✅ 成功トースト (success)</div>
+      <div class="mock-toast success">
+        <span class="mock-toast-icon">✓</span>
+        <span class="mock-toast-msg">登録しました</span>
+        <span class="mock-toast-x">✕</span>
+      </div>
+    </div>
+    <div class="preview-card">
+      <div class="preview-card-label">❌ 失敗トースト (error)</div>
+      <div class="mock-toast error">
+        <span class="mock-toast-icon">!</span>
+        <span class="mock-toast-msg">保存に失敗しました</span>
+        <span class="mock-toast-x">✕</span>
+      </div>
+    </div>
+    <div class="preview-card">
+      <div class="preview-card-label">ℹ️ 情報トースト (info)</div>
+      <div class="mock-toast info">
+        <span class="mock-toast-icon">i</span>
+        <span class="mock-toast-msg">バッチが完了しました</span>
+        <span class="mock-toast-x">✕</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       1. 完了条件
+  ══════════════════════════════════════════ -->
+  <div class="section" id="sec-overview">
+    <h2><span class="h2-num">1</span>完了条件の確認</h2>
+    <p class="section-desc">イシュー要件と本イシューの実装スコープを整理する。</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>完了条件</th>
+            <th>本イシューの扱い</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td>成功・失敗・情報の 3 種類のトーストを実装する</td>
+            <td>✅ <strong>実装対象</strong></td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td>一定時間（3 秒）後に自動的に消える</td>
+            <td>✅ <strong>実装対象</strong></td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td>複数のトーストを同時に表示できる</td>
+            <td>✅ <strong>実装対象</strong></td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td>アクセシビリティ対応（<code>aria-live</code>）を行う</td>
+            <td>✅ <strong>実装対象</strong></td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td>学習ログ 登録・編集・削除 成功/失敗でトーストが出る</td>
+            <td>⏳ 後続イシュー（CRUD フォームから <code>addToast</code> を呼ぶ）</td>
+          </tr>
+          <tr>
+            <td>6</td>
+            <td>科目 登録・編集・削除 成功/失敗でトーストが出る</td>
+            <td>⏳ 後続イシュー</td>
+          </tr>
+          <tr>
+            <td>7</td>
+            <td>バッチ完了（SSE）でトーストが出る</td>
+            <td>⏳ Phase 4（SSE クライアントから <code>addToast</code> を呼ぶ）</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout tip">
+      <span class="callout-icon">💡</span>
+      <div class="callout-body">
+        <span class="callout-title">本イシューのスコープ：条件 1〜4 のみ</span>
+        トースト基盤（Context + Provider + UI）を構築し、<code>useToast()</code> フックを公開する。
+        条件 5・6 は後続イシューで CRUD フォームが <code>addToast</code> を呼ぶだけで完結する。
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ══════════════════════════════════════════
+       ファイル一覧
+  ══════════════════════════════════════════ -->
+  <div class="section" id="sec-files">
+    <h2><span class="h2-num" style="background:var(--text-muted)">→</span>実装ファイル一覧</h2>
+    <p class="section-desc">新規作成 3 ファイル、更新 1 ファイルの合計 4 ファイル。</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>操作</th><th>ファイルパス</th><th>種別</th><th>役割</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="badge new">新規</span></td>
+            <td><code>_components/ToastContext.tsx</code></td>
+            <td><span class="badge client">Client</span></td>
+            <td>Context 定義・Provider・<code>useToast</code> フック</td>
+          </tr>
+          <tr>
+            <td><span class="badge new">新規</span></td>
+            <td><code>_components/Toaster.tsx</code></td>
+            <td><span class="badge client">Client</span></td>
+            <td>固定コンテナ + 個別トーストアイテム（自動消滅ロジック含む）</td>
+          </tr>
+          <tr>
+            <td><span class="badge new">新規</span></td>
+            <td><code>_components/Toaster.test.tsx</code></td>
+            <td><span class="badge test">Test</span></td>
+            <td>Jest + Testing Library による単体テスト（5 ケース）</td>
+          </tr>
+          <tr>
+            <td><span class="badge update">更新</span></td>
+            <td><code>(protected)/layout.tsx</code></td>
+            <td><span class="badge server">Server</span></td>
+            <td><code>ToastProvider</code> ラップと <code>Toaster</code> 追加</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ══════════════════════════════════════════
+       2. 設計方針
+  ══════════════════════════════════════════ -->
+  <div class="section" id="sec-arch">
+    <h2><span class="h2-num">2</span>設計方針</h2>
+    <p class="section-desc">実装前に設計の根拠を理解しておくことで、コードの意図を見失わずに進められる。</p>
+
+    <h3 id="sec-context-pattern">Context + Provider パターンを使う理由</h3>
+    <p>
+      学習ログフォーム・科目フォーム・バッチ画面など、<strong>互いに無関係な複数のコンポーネントからトーストを発火する</strong>必要がある。
+      Prop で渡す方法では、全ての中間コンポーネントに <code>onToast</code> を引き回す「Props Drilling」が発生する。
+      React Context を使えば、<code>useToast()</code> を呼ぶだけでどこからでもアクセスできる。
+    </p>
+
+    <div class="arch-diagram">
+      <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:16px;text-transform:uppercase;letter-spacing:.8px;">コンポーネントツリーと useToast() の呼び出し関係</div>
+
+      <div class="arch-tree">
+        <div><span class="arch-node provider">ToastProvider</span> <span class="arch-label">← 状態（Toast[]）を保持</span></div>
+        <div style="padding-left:24px;color:var(--text-light);">│</div>
+        <div style="padding-left:24px;"><span style="color:var(--text-light);">├─ </span><span class="arch-node server">Header</span> <span class="arch-label">Server Component（変更なし）</span></div>
+        <div style="padding-left:24px;color:var(--text-light);">│</div>
+        <div style="padding-left:24px;"><span style="color:var(--text-light);">├─ </span><span class="arch-node server">&lt;main&gt; / pages</span></div>
+        <div style="padding-left:48px;color:var(--text-light);">│</div>
+        <div style="padding-left:48px;"><span style="color:var(--text-light);">├─ </span><span class="arch-node client">StudyLogForm</span> <span class="arch-label">← useToast() で addToast 呼び出し</span></div>
+        <div style="padding-left:48px;"><span style="color:var(--text-light);">└─ </span><span class="arch-node client">SubjectForm</span>   <span class="arch-label">← useToast() で addToast 呼び出し</span></div>
+        <div style="padding-left:24px;color:var(--text-light);">│</div>
+        <div style="padding-left:24px;"><span style="color:var(--text-light);">└─ </span><span class="arch-node client">Toaster</span> <span class="arch-label">← toasts[] を読み取り画面右上に描画</span></div>
+      </div>
+
+      <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);">
+        <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:12px;text-transform:uppercase;letter-spacing:.8px;">データフロー</div>
+        <div class="arch-flow">
+          <div class="flow-box" style="background:var(--accent-dim);color:var(--accent);">任意コンポーネント<br><small>useToast()</small></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box" style="background:#ede9fe;color:#6d28d9;">ToastContext<br><small>addToast()</small></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box" style="background:var(--surface2);color:var(--text);">Toast[]<br><small>state 更新</small></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box" style="background:#dbeafe;color:var(--blue);">Toaster<br><small>再レンダリング</small></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box" style="background:var(--green-dim);color:var(--green);">画面右上<br><small>トースト表示</small></div>
+        </div>
+      </div>
+    </div>
+
+    <h3 id="sec-boundary">Server Component と Client Component の境界</h3>
+    <p>
+      Next.js 16 公式ドキュメントによると、React Context は Server Component では直接使えない。
+      しかし <strong>Server Component の layout.tsx から Client Component の Provider を <em>レンダリング</em> することは問題ない</strong>。
+      <code>children</code> を <code>&lt;ToastProvider&gt;</code> に渡すことで、各ページは Server Component のまま維持される。
+    </p>
+
+    <h4>なぜそうなるのか — 3 つのポイント</h4>
+
+    <div class="callout tip">
+      <span class="callout-icon">💡</span>
+      <div class="callout-body">
+        <span class="callout-title">① SC と CC の根本的な違い</span>
+        <strong>SC（Server Component）</strong> はサーバーで動き、HTML を生成して終わる。<code>useState</code> や <code>useContext</code> は使えない。<br>
+        <strong>CC（Client Component）</strong> はブラウザで動く。状態・イベントハンドラを持てる。<br>
+        React Context は「ブラウザ上のコンポーネントツリーで値を共有する仕組み」なので、SC では使えない。
+      </div>
+    </div>
+
+    <div class="callout tip">
+      <span class="callout-icon">💡</span>
+      <div class="callout-body">
+        <span class="callout-title">② Provider を「レンダリングする」と「使う」は別のこと</span>
+        layout.tsx（SC）は <code>&lt;ToastProvider&gt;</code> タグを書いているだけ。Context を<strong>消費（use/useContext）</strong>しているわけではない。<br>
+        「CC の ToastProvider で包んでね」という<strong>指示を出しているだけ</strong>。<br>
+        ToastProvider の本体（<code>useState</code>・Context 値の提供）はブラウザで動く CC の仕事。
+      </div>
+    </div>
+
+    <div class="callout tip">
+      <span class="callout-icon">💡</span>
+      <div class="callout-body">
+        <span class="callout-title">③ children が SC のまま維持される理由 —「誰が中身を決めるか」</span>
+        <code>children</code> の<strong>中身を決めているのは、<code>&lt;ToastProvider&gt;</code> を「書いた側」（layout.tsx = SC）</strong>。<br>
+        ToastProvider は受け取った children を<strong>置くだけ</strong>で、作り直さない。
+        <div style="margin-top:12px;font-family:'SF Mono','Cascadia Code',monospace;font-size:13px;background:#f5f3ff;border:1px solid #c4b5fd;border-radius:6px;padding:12px 16px;line-height:2;">
+          <span style="color:#64748b;">// layout.tsx（SC）が書いていること</span><br>
+          &lt;<span style="color:#7c3aed;font-weight:700;">ToastProvider</span>&gt;<br>
+          &nbsp;&nbsp;{children} <span style="color:#94a3b8;">← SC が決めた中身。ToastProvider は作り直さない</span><br>
+          &lt;/<span style="color:#7c3aed;font-weight:700;">ToastProvider</span>&gt;
+        </div>
+        <div style="margin-top:12px;">
+          <strong>箱の比喩：</strong>ToastProvider は「箱（CC）」、中身は SC が詰める。ToastProvider は箱として機能するだけで、中身は SC のまま変わらない。
+        </div>
+      </div>
+    </div>
+
+    <div class="arch-diagram">
+      <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:16px;text-transform:uppercase;letter-spacing:.8px;">誰が・どこで動くか</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+        <div style="background:var(--amber-dim);border:1px solid var(--amber-border);border-radius:8px;padding:16px;">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--amber);margin-bottom:8px;">Server Component</div>
+          <ul style="font-size:13px;list-style:none;line-height:2.1;color:#78350f;margin:0;padding:0;">
+            <li>✅ サーバーで HTML を生成する</li>
+            <li>✅ CC を呼び出す（JSXタグを書く）</li>
+            <li>❌ useState / useContext は使えない</li>
+            <li>❌ イベントハンドラは持てない</li>
+          </ul>
+        </div>
+        <div style="background:var(--blue-dim);border:1px solid var(--blue-border);border-radius:8px;padding:16px;">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--blue);margin-bottom:8px;">Client Component</div>
+          <ul style="font-size:13px;list-style:none;line-height:2.1;color:#1e3a8a;margin:0;padding:0;">
+            <li>✅ ブラウザで動く</li>
+            <li>✅ useState / useContext が使える</li>
+            <li>✅ イベントハンドラを持てる</li>
+            <li>✅ 外から children を受け取れる</li>
+          </ul>
+        </div>
+      </div>
+      <div style="padding-top:16px;border-top:1px solid var(--border);font-size:14px;color:var(--text-muted);line-height:1.75;">
+        <strong style="color:var(--text);">children の中身は誰が決める？</strong><br>
+        layout.tsx（SC）が <code>&lt;ToastProvider&gt;{children}&lt;/ToastProvider&gt;</code> を書いた時点で中身は確定。<br>
+        ToastProvider（CC）はその中身を「そのまま受け取って置く」だけ — 再生成しない。
+      </div>
+    </div>
+
+    <div class="before-after">
+      <div class="ba-panel">
+        <div class="ba-header before">❌ Before — Provider なし</div>
+        <pre style="font-size:12px;padding:14px;"><code><span class="cm">// layout.tsx (Server Component)</span>
+<span class="kw">export default function</span> <span class="fn">AppLayout</span>({ children }) {
+  <span class="kw">return</span> (
+    &lt;&gt;
+      &lt;<span class="ty">Header</span> /&gt;
+      &lt;main&gt;{children}&lt;/main&gt;
+    &lt;/&gt;
+  )
+}
+<span class="cm">// → useToast() が呼べない</span></code></pre>
+      </div>
+      <div class="ba-panel">
+        <div class="ba-header after">✅ After — Provider でラップ</div>
+        <pre style="font-size:12px;padding:14px;"><code><span class="cm">// layout.tsx (Server Component)</span>
+<span class="kw">export default function</span> <span class="fn">AppLayout</span>({ children }) {
+  <span class="kw">return</span> (
+    &lt;<span class="ty">ToastProvider</span>&gt;
+      &lt;<span class="ty">Header</span> /&gt;
+      &lt;main&gt;{children}&lt;/main&gt;
+      &lt;<span class="ty">Toaster</span> /&gt;
+    &lt;/<span class="ty">ToastProvider</span>&gt;
+  )
+}
+<span class="cm">// children は Server Component のまま</span></code></pre>
+      </div>
+    </div>
+
+    <div class="callout info">
+      <span class="callout-icon">📖</span>
+      <div class="callout-body">
+        <span class="callout-title">Next.js 公式ドキュメントより（Context Providers）</span>
+        "React context is not directly supported in Server Components. To use context, create a Client Component that accepts <code>children</code> and wraps the context provider.
+        This Client Component can then be imported and rendered within a Server Component,
+        allowing other Client Components throughout the application to consume the context."
+      </div>
+    </div>
+
+    <h3 id="sec-a11y">アクセシビリティ設計 — <code>aria-live</code></h3>
+    <p>
+      スクリーンリーダーは <code>aria-live</code> 領域に DOM の変化があった際のみ読み上げを行う。
+      トーストが追加されたとき、視覚に頼らずユーザーに通知できるよう設定する。
+    </p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>属性</th><th>値</th><th>理由</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>role="region"</code></td>
+            <td>—</td>
+            <td>通知エリアをランドマークとして識別させる（スクリーンリーダーで「通知」と案内される）</td>
+          </tr>
+          <tr>
+            <td><code>aria-live</code></td>
+            <td><code>"polite"</code></td>
+            <td>現在の読み上げが終わってから変化を読む。成功・情報トーストは割り込み不要</td>
+          </tr>
+          <tr>
+            <td><code>aria-label</code></td>
+            <td><code>"通知"</code></td>
+            <td><code>role="region"</code> には必ずアクセシブルな名前が必要。テストの <code>getByRole('region', { name: '通知' })</code> でも使う</td>
+          </tr>
+          <tr>
+            <td><code>aria-hidden</code></td>
+            <td>（アイコン要素に）</td>
+            <td>装飾アイコンをスクリーンリーダーに読み上げさせない</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout warn">
+      <span class="callout-icon">⚠️</span>
+      <div class="callout-body">
+        <span class="callout-title">エラートーストの読み上げ優先度について</span>
+        本実装では全トーストを <code>aria-live="polite"</code> で統一する。
+        WCAG 2.1 SC 4.1.3 では、エラーは <code>aria-live="assertive"</code>（即座に割り込み読み上げ）が望ましい。
+        個人利用アプリのスコープでは <code>"polite"</code> で許容範囲。
+        本番化する際は <a href="#sec-phase4">§Phase 4 連携メモ</a> の改善案を参照。
+      </div>
+    </div>
+
+    <h3 id="sec-dismiss">自動消滅の実装</h3>
+    <p>
+      各 <code>ToastItem</code> のマウント時に <code>useEffect</code> で <code>setTimeout</code> を登録し、
+      3,000 ms 後に <code>removeToast(id)</code> を呼ぶ。
+      <strong>クリーンアップ関数で <code>clearTimeout</code> を必ず呼ぶこと</strong>（手動で閉じた場合のメモリリーク防止）。
+    </p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <div class="code-dots"><div class="code-dot r"></div><div class="code-dot y"></div><div class="code-dot g"></div></div>
+        <span class="code-filename">自動消滅パターン</span>
+        <span class="code-lang">tsx</span>
+      </div>
+      <pre><code><span class="fn">useEffect</span>(() => {
+  <span class="kw">const</span> timer = <span class="fn">setTimeout</span>(() => <span class="fn">removeToast</span>(toast.id), <span class="nu">3_000</span>)
+  <span class="kw">return</span> () => <span class="fn">clearTimeout</span>(timer)  <span class="cm">// ← 手動クローズ時にタイマーをキャンセル</span>
+}, [toast.id, removeToast])</code></pre>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ══════════════════════════════════════════
+       3. 実装ステップ
+  ══════════════════════════════════════════ -->
+  <div class="section" id="sec-impl">
+    <h2><span class="h2-num">3</span>実装ステップ</h2>
+    <p class="section-desc">Step 1 → 4 の順で実装する。各 Step は前の Step に依存しない（Step 4 以外）。</p>
+
+    <div class="steps-container">
+
+      <!-- Step 1 -->
+      <div class="step" id="step1">
+        <div class="step-left">
+          <div class="step-circle">1</div>
+          <div class="step-line"></div>
+        </div>
+        <div class="step-content">
+          <div class="step-title"><code>ToastContext.tsx</code> — Context・Provider・フックの作成</div>
+          <p style="font-size:14px;color:var(--text-muted);margin-bottom:14px;">
+            トースト状態の管理とグローバルアクセスを担うファイル。React 19 の新 API を使う。
+          </p>
+
+          <div class="callout tip">
+            <span class="callout-icon">⚛️</span>
+            <div class="callout-body">
+              <span class="callout-title">React 19 の新 API を使う 2 つのポイント</span>
+              <strong>① <code>&lt;Context value={...}&gt;</code></strong> — 旧 <code>&lt;Context.Provider value={...}&gt;</code> は将来廃止予定。React 19 からは Provider を省略した短縮記法が使える。<br>
+              <strong>② <code>use(Context)</code></strong> — 旧 <code>useContext(Context)</code> の後継。<code>if</code> 文の中でも呼べる柔軟な API。
+            </div>
+          </div>
+
+          <div class="code-block">
+            <div class="code-header">
+              <div class="code-dots"><div class="code-dot r"></div><div class="code-dot y"></div><div class="code-dot g"></div></div>
+              <span class="code-filename">app/(protected)/_components/ToastContext.tsx</span>
+              <span class="code-lang">tsx</span>
+            </div>
+            <pre><code><span class="st">'use client'</span>
+
+<span class="kw">import</span> { createContext, useCallback, use, useState } <span class="kw">from</span> <span class="st">'react'</span>
+
+<span class="kw">export type</span> <span class="ty">ToastVariant</span> = <span class="st">'success'</span> | <span class="st">'error'</span> | <span class="st">'info'</span>
+
+<span class="kw">export type</span> <span class="ty">Toast</span> = {
+  id:      <span class="ty">string</span>
+  variant: <span class="ty">ToastVariant</span>
+  message: <span class="ty">string</span>
+}
+
+<span class="kw">type</span> <span class="ty">ToastContextValue</span> = {
+  toasts:      <span class="ty">Toast</span>[]
+  addToast:    (message: <span class="ty">string</span>, variant?: <span class="ty">ToastVariant</span>) => <span class="ty">void</span>
+  removeToast: (id: <span class="ty">string</span>) => <span class="ty">void</span>
+}
+
+<span class="kw">const</span> <span class="ty">ToastContext</span> = createContext&lt;<span class="ty">ToastContextValue</span> | <span class="kw">null</span>&gt;(<span class="kw">null</span>)
+
+<span class="kw">export function</span> <span class="fn">ToastProvider</span>({ children }: { children: <span class="ty">React.ReactNode</span> }) {
+  <span class="kw">const</span> [toasts, setToasts] = useState&lt;<span class="ty">Toast</span>[]&gt;([])
+
+  <span class="kw">const</span> addToast = useCallback((message: <span class="ty">string</span>, variant: <span class="ty">ToastVariant</span> = <span class="st">'info'</span>) => {
+    <span class="kw">const</span> id = crypto.randomUUID()
+    setToasts((prev) => [...prev, { id, variant, message }])
+  }, [])
+
+  <span class="kw">const</span> removeToast = useCallback((id: <span class="ty">string</span>) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id))
+  }, [])
+
+  <span class="cm">// React 19: &lt;Context value={...}&gt; — .Provider を省略する新記法</span>
+  <span class="kw">return</span> (
+    &lt;<span class="ty">ToastContext</span> value={{ toasts, addToast, removeToast }}&gt;
+      {children}
+    &lt;/<span class="ty">ToastContext</span>&gt;
+  )
+}
+
+<span class="kw">export function</span> <span class="fn">useToast</span>(): <span class="ty">ToastContextValue</span> {
+  <span class="cm">// React 19: use(Context) — useContext の後継 API</span>
+  <span class="kw">const</span> ctx = use(<span class="ty">ToastContext</span>)
+  <span class="kw">if</span> (ctx === <span class="kw">null</span>) {
+    <span class="kw">throw new</span> Error(<span class="st">'useToast は ToastProvider の子コンポーネント内で使用してください'</span>)
+  }
+  <span class="kw">return</span> ctx
+}</code></pre>
+          </div>
+
+          <h4>実装のポイント</h4>
+          <ul class="prose">
+            <li><code>addToast</code> / <code>removeToast</code> を <code>useCallback</code> でメモ化 → 子コンポーネントの不要な再レンダリングを防ぐ（詳細は下記）</li>
+            <li><code>crypto.randomUUID()</code> は Web 標準 API。jest-environment-jsdom v30（jsdom v26 搭載）で利用可能</li>
+            <li><code>createContext&lt;T | null&gt;(null)</code> + <code>useToast</code> 内で null チェック → Provider 外での誤用を即座に検出</li>
+          </ul>
+
+          <h4>useCallback でなぜ再レンダリングを抑制できるのか</h4>
+
+          <div class="callout tip">
+            <span class="callout-icon">💡</span>
+            <div class="callout-body">
+              <span class="callout-title">前提：JavaScript の関数は毎回「別のオブジェクト」になる</span>
+              <p style="margin-bottom:10px;">
+                コンポーネントが再レンダリングされるたびに、関数定義は<strong>新しいオブジェクト</strong>として生成される。
+                中身のコードが同じでも、参照（メモリアドレス）は異なる。
+              </p>
+              <div class="code-block" style="margin:0;">
+                <div class="code-header">
+                  <div class="code-dots"><div class="code-dot r"></div><div class="code-dot y"></div><div class="code-dot g"></div></div>
+                  <span class="code-filename">JavaScript の参照等価性</span>
+                  <span class="code-lang">js</span>
+                </div>
+                <pre style="padding:14px;font-size:13px;"><code><span class="kw">const</span> a = () => {}
+<span class="kw">const</span> b = () => {}
+a === b  <span class="cm">// false — 中身が同じでも別オブジェクト</span></code></pre>
+              </div>
+            </div>
+          </div>
+
+          <div class="callout tip">
+            <span class="callout-icon">💡</span>
+            <div class="callout-body">
+              <span class="callout-title">React の再レンダリング判定は <code>===</code>（参照の同一性）で行う</span>
+              <p style="margin-bottom:10px;">
+                子コンポーネントは <strong>props が変わったとき</strong>に再レンダリングする。
+                React の比較は参照の同一性（<code>===</code>）なので、
+                中身が同じ関数でも別オブジェクトなら「変わった」と判定される。
+              </p>
+              <div class="arch-diagram" style="margin:0;">
+                <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:14px;text-transform:uppercase;letter-spacing:.8px;">useCallback なし vs あり</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                  <div style="background:var(--red-dim);border:1px solid var(--red-border);border-radius:8px;padding:14px;">
+                    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--red);margin-bottom:10px;">useCallback なし</div>
+                    <div style="font-family:'SF Mono','Cascadia Code',monospace;font-size:12px;line-height:2;color:#7f1d1d;">
+                      再レンダリング発生<br>
+                      ↓<br>
+                      addToast = <strong>新しい関数</strong><br>
+                      ↓<br>
+                      子の props が <code>===</code> で変化<br>
+                      ↓<br>
+                      子も再レンダリング
+                    </div>
+                  </div>
+                  <div style="background:var(--green-dim);border:1px solid var(--green-border);border-radius:8px;padding:14px;">
+                    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--green);margin-bottom:10px;">useCallback あり</div>
+                    <div style="font-family:'SF Mono','Cascadia Code',monospace;font-size:12px;line-height:2;color:#14532d;">
+                      再レンダリング発生<br>
+                      ↓<br>
+                      addToast = <strong>同じ関数参照</strong><br>
+                      ↓<br>
+                      子の props が <code>===</code> で同一<br>
+                      ↓<br>
+                      子の再レンダリングをスキップ
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="callout warn">
+            <span class="callout-icon">⚠️</span>
+            <div class="callout-body">
+              <span class="callout-title">ただし <code>React.memo</code> との組み合わせが必要</span>
+              <p style="margin-bottom:10px;">
+                <code>useCallback</code> 単体では効かない。
+                子コンポーネントが <code>React.memo</code> で包まれていて初めて意味を持つ。
+                <code>React.memo</code> は「前回と props が変わっていなければ再レンダリングしない」という最適化。
+              </p>
+              <div class="code-block" style="margin:0 0 12px;">
+                <div class="code-header">
+                  <div class="code-dots"><div class="code-dot r"></div><div class="code-dot y"></div><div class="code-dot g"></div></div>
+                  <span class="code-filename">2 段構えのセット</span>
+                  <span class="code-lang">tsx</span>
+                </div>
+                <pre style="padding:14px;font-size:13px;"><code><span class="cm">// ① 親側：useCallback で参照を固定</span>
+<span class="kw">const</span> addToast = <span class="fn">useCallback</span>((message, variant) => { ... }, [])
+
+<span class="cm">// ② 子側：React.memo で「props が同じなら再レンダリングしない」</span>
+<span class="kw">const</span> <span class="ty">StudyLogForm</span> = React.<span class="fn">memo</span>(<span class="kw">function</span> <span class="fn">StudyLogForm</span>({ addToast }) {
+  <span class="cm">// React.memo なしだと useCallback の効果がない</span>
+  ...
+})</code></pre>
+              </div>
+              <code>React.memo</code> なしの場合、親が再レンダリングされると問答無用で子も再レンダリングされるため、<code>useCallback</code> で参照を固定しても意味がない。
+            </div>
+          </div>
+
+          <div class="callout info">
+            <span class="callout-icon">📖</span>
+            <div class="callout-body">
+              <span class="callout-title">useEffect の依存配列でも有効</span>
+              <code>React.memo</code> と組み合わせる場面以外にも、子コンポーネントが <code>addToast</code> を <code>useEffect</code> の依存配列に入れているとき、参照が安定していれば Effect の不要な再実行を防げる。
+              <div class="code-block" style="margin:10px 0 0;">
+                <div class="code-header">
+                  <div class="code-dots"><div class="code-dot r"></div><div class="code-dot y"></div><div class="code-dot g"></div></div>
+                  <span class="code-filename">useEffect の deps に関数を使う例</span>
+                  <span class="code-lang">tsx</span>
+                </div>
+                <pre style="padding:14px;font-size:13px;"><code><span class="fn">useEffect</span>(() => {
+  fetchData().<span class="fn">then</span>(() => <span class="fn">addToast</span>(<span class="st">'完了'</span>, <span class="st">'success'</span>))
+}, [addToast])  <span class="cm">// addToast の参照が安定 → Effect が毎回再実行されない</span></code></pre>
+              </div>
+            </div>
+          </div>
+
+          <div class="callout warn">
+            <span class="callout-icon">⚠️</span>
+            <div class="callout-body">
+              <span class="callout-title">なぜ <code>&lt;ToastContextValue | null&gt;</code> にするのか — Fail Fast パターン</span>
+              <p style="margin-bottom:10px;">
+                <code>toasts</code> は空配列で初期化できるため、<code>&lt;ToastContextValue&gt;</code> と書いてダミーの初期値を渡すことも技術的には可能。
+                しかしそうすると <code>addToast</code> が「何もしない関数」になり、Provider 外で呼んでもエラーが出ない。
+              </p>
+              <div class="table-wrap" style="margin:0 0 12px;">
+                <table>
+                  <thead>
+                    <tr><th>パターン</th><th>Provider 外で <code>addToast()</code> を呼ぶと</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><code>createContext&lt;ToastContextValue&gt;({ addToast: () => {}, ... })</code></td>
+                      <td>何も起きない。エラーなし。トーストも出ない。<strong>サイレントな不具合</strong></td>
+                    </tr>
+                    <tr>
+                      <td><code>createContext&lt;ToastContextValue | null&gt;(null)</code></td>
+                      <td>即座に <code>throw new Error(...)</code> → バグの場所がすぐわかる</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              「動くけど何も起きない」より「すぐ壊れてエラーが出る」方がバグの発見が早い。これを <strong>Fail Fast（早く失敗させる）</strong> と呼ぶ。
+              <code>null</code> を初期値にする意図は、Provider の外での誤使用を<strong>実行時に即検出する</strong>ためのものであり、積極的な設計判断。
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="step" id="step2">
+        <div class="step-left">
+          <div class="step-circle">2</div>
+          <div class="step-line"></div>
+        </div>
+        <div class="step-content">
+          <div class="step-title"><code>Toaster.tsx</code> — コンテナとトーストアイテムの作成</div>
+          <p style="font-size:14px;color:var(--text-muted);margin-bottom:14px;">
+            画面固定コンテナ（アクセシビリティ属性付き）と、個別トーストアイテムを同一ファイルに実装する。
+          </p>
+
+          <div class="code-block">
+            <div class="code-header">
+              <div class="code-dots"><div class="code-dot r"></div><div class="code-dot y"></div><div class="code-dot g"></div></div>
+              <span class="code-filename">app/(protected)/_components/Toaster.tsx</span>
+              <span class="code-lang">tsx</span>
+            </div>
+            <pre><code><span class="st">'use client'</span>
+
+<span class="kw">import</span> { useEffect } <span class="kw">from</span> <span class="st">'react'</span>
+<span class="kw">import</span> { FaCheck, FaExclamationCircle, FaInfoCircle, FaTimes } <span class="kw">from</span> <span class="st">'react-icons/fa'</span>
+
+<span class="kw">import</span> { <span class="kw">type</span> <span class="ty">Toast</span>, <span class="kw">type</span> <span class="ty">ToastVariant</span>, useToast } <span class="kw">from</span> <span class="st">'./ToastContext'</span>
+
+<span class="kw">const</span> DISMISS_MS = <span class="nu">3_000</span>
+
+<span class="kw">const</span> <span class="ty">VARIANT_STYLES</span>: Record&lt;<span class="ty">ToastVariant</span>, <span class="ty">string</span>&gt; = {
+  success: <span class="st">'border-green-500 text-green-800 bg-green-50'</span>,
+  error:   <span class="st">'border-red-500   text-red-800   bg-red-50'</span>,
+  info:    <span class="st">'border-blue-500  text-blue-800  bg-blue-50'</span>,
+}
+
+<span class="kw">function</span> <span class="fn">VariantIcon</span>({ variant }: { variant: <span class="ty">ToastVariant</span> }) {
+  <span class="kw">if</span> (variant === <span class="st">'success'</span>) <span class="kw">return</span> &lt;FaCheck            className=<span class="st">"h-4 w-4 shrink-0"</span> aria-hidden /&gt;
+  <span class="kw">if</span> (variant === <span class="st">'error'</span>)   <span class="kw">return</span> &lt;FaExclamationCircle className=<span class="st">"h-4 w-4 shrink-0"</span> aria-hidden /&gt;
+  <span class="kw">return</span>                             &lt;FaInfoCircle         className=<span class="st">"h-4 w-4 shrink-0"</span> aria-hidden /&gt;
+}
+
+<span class="cm">// ファイル内プライベート — 外部に export しない</span>
+<span class="kw">function</span> <span class="fn">ToastItem</span>({ toast }: { toast: <span class="ty">Toast</span> }) {
+  <span class="kw">const</span> { removeToast } = useToast()
+
+  useEffect(() => {
+    <span class="kw">const</span> timer = setTimeout(() => removeToast(toast.id), DISMISS_MS)
+    <span class="kw">return</span> () => clearTimeout(timer)
+  }, [toast.id, removeToast])
+
+  <span class="kw">return</span> (
+    &lt;div
+      className={`flex w-80 items-start gap-3 rounded-lg border-l-4 bg-white
+        px-4 py-3 shadow-md text-sm ${<span class="ty">VARIANT_STYLES</span>[toast.variant]}`}
+    &gt;
+      &lt;<span class="fn">VariantIcon</span> variant={toast.variant} /&gt;
+      &lt;span className=<span class="st">"flex-1"</span>&gt;{toast.message}&lt;/span&gt;
+      &lt;button
+        type=<span class="st">"button"</span>
+        aria-label=<span class="st">"通知を閉じる"</span>
+        onClick={() => removeToast(toast.id)}
+        className=<span class="st">"ml-auto shrink-0 opacity-50 hover:opacity-100 transition-opacity"</span>
+      &gt;
+        &lt;FaTimes className=<span class="st">"h-3 w-3"</span> aria-hidden /&gt;
+      &lt;/button&gt;
+    &lt;/div&gt;
+  )
+}
+
+<span class="kw">export default function</span> <span class="fn">Toaster</span>() {
+  <span class="kw">const</span> { toasts } = useToast()
+
+  <span class="kw">return</span> (
+    &lt;div
+      role=<span class="st">"region"</span>
+      aria-live=<span class="st">"polite"</span>
+      aria-label=<span class="st">"通知"</span>
+      className=<span class="st">"fixed right-4 top-4 z-50 flex flex-col gap-2"</span>
+    &gt;
+      {toasts.map((toast) => (
+        &lt;<span class="fn">ToastItem</span> key={toast.id} toast={toast} /&gt;
+      ))}
+    &lt;/div&gt;
+  )
+}</code></pre>
+          </div>
+
+          <h4>実装のポイント</h4>
+          <ul class="prose">
+            <li><code>ToastItem</code> はファイル内プライベート関数（export しない）。<code>Toaster</code> だけが外部向けインターフェース</li>
+            <li><code>fixed right-4 top-4 z-50</code> で画面右上に固定。DOM 順序は見た目に影響しない</li>
+            <li>アイコン要素に <code>aria-hidden</code> を付与し、スクリーンリーダーが「チェックマーク画像」などと読み上げるのを防ぐ</li>
+            <li><code>aria-label="通知を閉じる"</code> はテストで <code>getByRole('button', { name: '通知を閉じる' })</code> として参照する</li>
+            <li><code>const &#123; removeToast &#125; = useToast()</code> — 戻り値オブジェクトから必要な関数だけを取り出す分割代入（詳細は下記）</li>
+          </ul>
+
+          <h4>useToast() の戻り値と分割代入</h4>
+
+          <div class="callout tip">
+            <span class="callout-icon">💡</span>
+            <div class="callout-body">
+              <span class="callout-title"><code>const &#123; removeToast &#125; = useToast()</code> と書く理由</span>
+              <p style="margin-bottom:12px;">
+                <code>useToast()</code> の戻り値は関数単体ではなく、複数のプロパティを持つ<strong>オブジェクト</strong>。
+                そのまま受け取っても関数として呼び出せないため、分割代入で必要なものだけ取り出す。
+              </p>
+              <div class="code-block" style="margin:0 0 14px;">
+                <div class="code-header">
+                  <div class="code-dots"><div class="code-dot r"></div><div class="code-dot y"></div><div class="code-dot g"></div></div>
+                  <span class="code-filename">useToast() の戻り値</span>
+                  <span class="code-lang">ts</span>
+                </div>
+                <pre style="padding:14px;font-size:13px;"><code>{
+  toasts:      <span class="ty">Toast</span>[],        <span class="cm">// トースト一覧</span>
+  addToast:    (...) => <span class="ty">void</span>,  <span class="cm">// トースト追加</span>
+  removeToast: (...) => <span class="ty">void</span>,  <span class="cm">// トースト削除 ← ToastItem が使うのはこれだけ</span>
+}</code></pre>
+              </div>
+              <div class="before-after" style="margin:0 0 4px;">
+                <div class="ba-panel">
+                  <div class="ba-header before">❌ 分割代入なし</div>
+                  <pre style="font-size:12px;padding:14px;background:var(--code-bg);color:var(--code-text);"><code><span class="kw">const</span> removeToast = <span class="fn">useToast</span>()
+<span class="cm">// removeToast = { toasts, addToast, removeToast }</span>
+<span class="cm">// オブジェクト全体が入る → 関数として呼べない</span>
+<span class="fn">removeToast</span>(id)  <span class="cm">// ❌ エラー</span></code></pre>
+                </div>
+                <div class="ba-panel">
+                  <div class="ba-header after">✅ 分割代入あり</div>
+                  <pre style="font-size:12px;padding:14px;background:var(--code-bg);color:var(--code-text);"><code><span class="kw">const</span> { removeToast } = <span class="fn">useToast</span>()
+<span class="cm">// removeToast = fn  ← 関数だけ取り出せた</span>
+
+<span class="fn">removeToast</span>(id)  <span class="cm">// ✅ 呼べる</span></code></pre>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <h4>引数の分割代入と型定義の読み方</h4>
+
+          <div class="callout tip">
+            <span class="callout-icon">💡</span>
+            <div class="callout-body">
+              <span class="callout-title"><code>&#123; variant &#125;: &#123; variant: ToastVariant &#125;</code> の読み方</span>
+              <p style="margin-bottom:12px;">
+                コードに登場するこの記法は、<strong>分割代入（値の世界）</strong>と<strong>型定義（型の世界）</strong>が
+                <code>:</code> を境に並んでいる。
+              </p>
+              <div class="arch-diagram" style="margin:0 0 14px;">
+                <div style="font-family:'SF Mono','Cascadia Code',monospace;font-size:14px;text-align:center;padding:10px 0 16px;letter-spacing:1px;">
+                  <span style="background:var(--accent-dim);color:var(--accent);padding:4px 10px;border-radius:6px;font-weight:700;">&#123; variant &#125;</span>
+                  <span style="color:var(--text-light);padding:0 12px;font-size:18px;">:</span>
+                  <span style="background:var(--blue-dim);color:var(--blue);padding:4px 10px;border-radius:6px;font-weight:700;">&#123; variant: ToastVariant &#125;</span>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                  <div style="background:var(--accent-dim);border:1px solid #c7d2fe;border-radius:8px;padding:14px;">
+                    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--accent);margin-bottom:8px;">値の世界（分割代入）</div>
+                    <p style="font-size:13px;color:#3730a3;margin:0;line-height:1.75;">
+                      引数として受け取ったオブジェクトから<br>
+                      <code>variant</code> プロパティを取り出す。<br>
+                      関数内で <code>variant</code> と直接書ける。
+                    </p>
+                  </div>
+                  <div style="background:var(--blue-dim);border:1px solid var(--blue-border);border-radius:8px;padding:14px;">
+                    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--blue);margin-bottom:8px;">型の世界（型定義）</div>
+                    <p style="font-size:13px;color:#1e3a8a;margin:0;line-height:1.75;">
+                      <code>variant</code> というキーを持ち、<br>
+                      その型が <code>ToastVariant</code> であるオブジェクトを<br>
+                      引数として受け付けますよ、という宣言。
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div class="code-block" style="margin:0 0 14px;">
+                <div class="code-header">
+                  <div class="code-dots"><div class="code-dot r"></div><div class="code-dot y"></div><div class="code-dot g"></div></div>
+                  <span class="code-filename">分割代入あり vs なし</span>
+                  <span class="code-lang">tsx</span>
+                </div>
+                <pre style="padding:14px;font-size:13px;"><code><span class="cm">// 分割代入あり（このコード）</span>
+<span class="kw">function</span> <span class="fn">VariantIcon</span>({ variant }: { variant: <span class="ty">ToastVariant</span> }) {
+  <span class="cm">// variant と直接使える</span>
+}
+
+<span class="cm">// 分割代入なし（同じ意味）</span>
+<span class="kw">function</span> <span class="fn">VariantIcon</span>(props: { variant: <span class="ty">ToastVariant</span> }) {
+  <span class="cm">// props.variant と書く必要がある</span>
+}</code></pre>
+              </div>
+              <p style="margin:0;font-size:14px;">
+                型定義のオブジェクト構文は必ず <code>&#123; キー名: 型 &#125;</code> の形で書く。
+                <code>&#123; ToastVariant &#125;</code> のように型名だけを書いても、それが何のキーの型なのか TypeScript には伝わらないため文法エラーになる。
+              </p>
+            </div>
+          </div>
+
+          <h4>key と toast を両方指定する理由</h4>
+
+          <div class="callout tip">
+            <span class="callout-icon">💡</span>
+            <div class="callout-body">
+              <span class="callout-title">2 つは目的が異なる</span>
+              <p style="margin-bottom:12px;">
+                リスト描画で登場する <code>key</code> と <code>toast</code> は、見た目は似ているが役割が全く違う。
+              </p>
+              <div class="table-wrap" style="margin:0 0 14px;">
+                <table>
+                  <thead>
+                    <tr><th>props</th><th>誰が使うか</th><th>目的</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><code>key={toast.id}</code></td>
+                      <td><strong>React 内部</strong></td>
+                      <td>リストの各要素を識別する。<code>ToastItem</code> の中からは参照できない</td>
+                    </tr>
+                    <tr>
+                      <td><code>toast={toast}</code></td>
+                      <td><strong>ToastItem</strong></td>
+                      <td>メッセージ・種類・ID を受け取り、表示に使う</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="code-block" style="margin:0 0 14px;">
+                <div class="code-header">
+                  <div class="code-dots"><div class="code-dot r"></div><div class="code-dot y"></div><div class="code-dot g"></div></div>
+                  <span class="code-filename">Toaster.tsx — リスト描画部分</span>
+                  <span class="code-lang">tsx</span>
+                </div>
+                <pre style="padding:14px;font-size:13px;"><code>{toasts.<span class="fn">map</span>((toast) => (
+  &lt;<span class="ty">ToastItem</span>
+    key={toast.id}   <span class="cm">// React が使う（ToastItem 内では参照不可）</span>
+    toast={toast}    <span class="cm">// ToastItem が使う（中身を表示するため）</span>
+  /&gt;
+))}</code></pre>
+              </div>
+              <p style="margin:0;font-size:14px;line-height:1.75;">
+                <code>key</code> が必要な理由は、React がリストを再レンダリングするとき「どの要素が追加・削除されたか」を判断するため。
+                <code>key</code> がないと全要素を作り直してしまい非効率になる。
+                <code>toast.id</code> を使うのは、各トーストに一意な値だから。
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="step" id="step3">
+        <div class="step-left">
+          <div class="step-circle">3</div>
+          <div class="step-line"></div>
+        </div>
+        <div class="step-content">
+          <div class="step-title"><code>layout.tsx</code> を更新 — <code>ToastProvider</code> でラップ</div>
+
+          <div class="code-block">
+            <div class="code-header">
+              <div class="code-dots"><div class="code-dot r"></div><div class="code-dot y"></div><div class="code-dot g"></div></div>
+              <span class="code-filename">app/(protected)/layout.tsx</span>
+              <span class="code-lang">tsx</span>
+            </div>
+            <pre><code><span class="kw">import</span> <span class="ty">Header</span>                   <span class="kw">from</span> <span class="st">'./_components/Header'</span>
+<span class="kw">import</span> { <span class="ty">ToastProvider</span> }         <span class="kw">from</span> <span class="st">'./_components/ToastContext'</span>
+<span class="kw">import</span> <span class="ty">Toaster</span>                   <span class="kw">from</span> <span class="st">'./_components/Toaster'</span>
+
+<span class="kw">export default function</span> <span class="fn">AppLayout</span>({
+  children,
+}: {
+  children: <span class="ty">React.ReactNode</span>
+}) {
+  <span class="kw">return</span> (
+    &lt;<span class="ty">ToastProvider</span>&gt;
+      &lt;<span class="ty">Header</span> /&gt;
+      &lt;main className=<span class="st">"mx-auto max-w-5xl px-4 py-6"</span>&gt;{children}&lt;/main&gt;
+      &lt;<span class="ty">Toaster</span> /&gt;   <span class="cm">{/* fixed 配置なので DOM 順序は見た目に無関係 */}</span>
+    &lt;/<span class="ty">ToastProvider</span>&gt;
+  )
+}</code></pre>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>変更箇所</th><th>変更内容</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>ルート要素</td>
+                  <td><code>&lt;ToastProvider&gt;</code> でラップ。<code>children</code>（各ページ）は Server Component のまま維持される</td>
+                </tr>
+                <tr>
+                  <td><code>&lt;Toaster /&gt;</code></td>
+                  <td><code>&lt;main&gt;</code> の直後に追加。<code>fixed</code> 配置なので画面レイアウトへの影響なし</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 4 -->
+      <div class="step" id="step4">
+        <div class="step-left">
+          <div class="step-circle">4</div>
+          <div class="step-line"></div>
+        </div>
+        <div class="step-content">
+          <div class="step-title"><code>Toaster.test.tsx</code> — 単体テスト</div>
+          <p style="font-size:14px;color:var(--text-muted);margin-bottom:14px;">
+            フェイクタイマーを使って自動消滅を同期的に検証する。
+          </p>
+
+          <div class="callout info">
+            <span class="callout-icon">⏱</span>
+            <div class="callout-body">
+              <span class="callout-title">フェイクタイマーのパターン</span>
+              <code>jest.useFakeTimers()</code> で <code>setTimeout</code> を乗っ取り、
+              <code>jest.advanceTimersByTime(3000)</code> で時間を進める。
+              <code>userEvent.setup({ advanceTimers: jest.advanceTimersByTime })</code> で
+              ユーザーイベントとフェイクタイマーを連携させることが重要。
+              <code>act()</code> で React の状態更新をフラッシュしてから DOM を検証する。
+            </div>
+          </div>
+
+          <h4>Jest タイマー制御 API の役割</h4>
+
+          <div class="callout tip">
+            <span class="callout-icon">💡</span>
+            <div class="callout-body">
+              <span class="callout-title">なぜフェイクタイマーが必要か</span>
+              <p style="margin-bottom:12px;">
+                トーストは「3秒後に消える」という挙動を持つ。テストで実際に 3 秒待つと
+                テストが遅く・不安定になる。
+                Jest のフェイクタイマーを使えば、時間を手動で操作して<strong>即座に・確実に</strong>その挙動を検証できる。
+              </p>
+              <div class="table-wrap" style="margin:0 0 14px;">
+                <table>
+                  <thead>
+                    <tr><th>API</th><th>何をするか</th><th>このテストでの用途</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><code>jest.useFakeTimers()</code></td>
+                      <td><code>setTimeout</code> などを Jest 製の偽物に差し替える。呼んだだけでは時間は進まない</td>
+                      <td><code>beforeEach</code> で各テスト前に有効化</td>
+                    </tr>
+                    <tr>
+                      <td><code>jest.runOnlyPendingTimers()</code></td>
+                      <td>登録済みの <code>setTimeout</code> を今すぐ実行する。3000ms 待たずに「3秒が経過した」状態にできる</td>
+                      <td><code>afterEach</code> で残留タイマーをクリーンアップ</td>
+                    </tr>
+                    <tr>
+                      <td><code>jest.useRealTimers()</code></td>
+                      <td>偽物のタイマーを本物に戻す</td>
+                      <td><code>afterEach</code> でテスト後のクリーンアップ</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="code-block" style="margin:0;">
+                <div class="code-header">
+                  <div class="code-dots"><div class="code-dot r"></div><div class="code-dot y"></div><div class="code-dot g"></div></div>
+                  <span class="code-filename">フェイクタイマーの動作イメージ</span>
+                  <span class="code-lang">ts</span>
+                </div>
+                <pre style="padding:14px;font-size:13px;"><code>jest.<span class="fn">useFakeTimers</span>()
+<span class="fn">setTimeout</span>(() => console.<span class="fn">log</span>(<span class="st">'3秒後'</span>), <span class="nu">3000</span>)
+<span class="cm">// ← この時点ではまだ何も起きない</span>
+
+jest.<span class="fn">runOnlyPendingTimers</span>()
+<span class="cm">// → 即座に「3秒後」が出力される。実際には1msも経っていない</span>
+
+jest.<span class="fn">useRealTimers</span>()
+<span class="cm">// → タイマーを本物に戻す</span></code></pre>
+              </div>
+            </div>
+          </div>
+
+          <div class="callout tip">
+            <span class="callout-icon">💡</span>
+            <div class="callout-body">
+              <span class="callout-title"><code>advanceTimersByTime</code> と <code>runOnlyPendingTimers</code> の違い</span>
+              <p style="margin-bottom:12px;">
+                どちらもタイマーを即時実行するが、「時間の概念があるかどうか」が異なる。
+              </p>
+              <div class="table-wrap" style="margin:0 0 14px;">
+                <table>
+                  <thead>
+                    <tr><th></th><th><code>advanceTimersByTime(ms)</code></th><th><code>runOnlyPendingTimers()</code></th></tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>何を実行するか</td>
+                      <td>指定ミリ秒以内に発火するタイマーだけ</td>
+                      <td>現在登録されている全タイマー</td>
+                    </tr>
+                    <tr>
+                      <td>時間の概念</td>
+                      <td>あり（何ms 経過したかを指定）</td>
+                      <td>なし（遅延を無視して即実行）</td>
+                    </tr>
+                    <tr>
+                      <td>主な用途</td>
+                      <td>「3秒後に消える」などの時間依存の挙動を検証</td>
+                      <td>テスト後の残留タイマーをまとめてクリーンアップ</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="code-block" style="margin:0 0 14px;">
+                <div class="code-header">
+                  <div class="code-dots"><div class="code-dot r"></div><div class="code-dot y"></div><div class="code-dot g"></div></div>
+                  <span class="code-filename">使い分けの例</span>
+                  <span class="code-lang">ts</span>
+                </div>
+                <pre style="padding:14px;font-size:13px;"><code><span class="fn">setTimeout</span>(() => console.<span class="fn">log</span>(<span class="st">'A'</span>), <span class="nu">3000</span>)
+<span class="fn">setTimeout</span>(() => console.<span class="fn">log</span>(<span class="st">'B'</span>), <span class="nu">5000</span>)
+
+jest.<span class="fn">advanceTimersByTime</span>(<span class="nu">3000</span>)
+<span class="cm">// → 「A」だけ出力。「B」は 5000ms に達していないので発火しない</span>
+
+jest.<span class="fn">runOnlyPendingTimers</span>()
+<span class="cm">// → 残っている「B」も含めて全タイマーを即実行</span></code></pre>
+              </div>
+              <div class="before-after" style="margin:0;">
+                <div class="ba-panel">
+                  <div class="ba-header after">✅ テスト本体で使う</div>
+                  <pre style="font-size:12px;padding:14px;background:var(--code-bg);color:var(--code-text);"><code><span class="cm">// 「ちょうど3秒経った」を再現</span>
+<span class="fn">act</span>(() => jest.<span class="fn">advanceTimersByTime</span>(<span class="nu">3_000</span>))
+expect(screen.<span class="fn">queryByText</span>(<span class="st">'登録しました'</span>))
+  .not.toBeInTheDocument()</code></pre>
+                </div>
+                <div class="ba-panel">
+                  <div class="ba-header after">✅ afterEach で使う</div>
+                  <pre style="font-size:12px;padding:14px;background:var(--code-bg);color:var(--code-text);"><code><span class="cm">// 残留タイマーを全部片付けてから</span>
+<span class="cm">// 本物のタイマーに戻す</span>
+jest.<span class="fn">runOnlyPendingTimers</span>()
+jest.<span class="fn">useRealTimers</span>()</code></pre>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="callout warn">
+            <span class="callout-icon">⚠️</span>
+            <div class="callout-body">
+              <span class="callout-title"><code>runOnlyPendingTimers()</code> は <code>act()</code> で囲む</span>
+              <p style="margin-bottom:12px;">
+                <code>afterEach</code> で <code>jest.runOnlyPendingTimers()</code> を呼ぶと、残っている
+                <code>setTimeout</code> のコールバックが実行される。
+                このコールバックは <code>removeToast()</code> を呼ぶため、<code>ToastProvider</code> の
+                state が更新される。この更新が <code>act()</code> の外で起きると React が警告を出す。
+              </p>
+              <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:14px;font-size:13px;line-height:2;">
+                <div style="color:var(--text-muted);margin-bottom:6px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;">runOnlyPendingTimers() が state 更新につながる流れ</div>
+                <code>runOnlyPendingTimers()</code><br>
+                <span style="color:var(--text-light);padding-left:16px;">→ </span><code>setTimeout</code> のコールバック実行<br>
+                <span style="color:var(--text-light);padding-left:32px;">→ </span><code>removeToast(id)</code> 実行<br>
+                <span style="color:var(--text-light);padding-left:48px;">→ </span><code>setToasts(...)</code> 実行 <strong style="color:var(--red);">← state 更新！</strong>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin:0 0 14px;">
+                <div style="background:var(--red-dim);border:1px solid var(--red-border);border-radius:8px;overflow:hidden;">
+                  <div style="padding:7px 12px;font-size:11px;font-weight:700;color:var(--red);border-bottom:1px solid var(--red-border);">❌ act なし</div>
+                  <pre style="font-size:12px;padding:12px;background:var(--code-bg);color:var(--code-text);margin:0;"><code><span class="fn">afterEach</span>(() => {
+  jest.<span class="fn">runOnlyPendingTimers</span>()
+  jest.<span class="fn">useRealTimers</span>()
+})
+<span class="cm">// state 更新が act 外 → 警告</span></code></pre>
+                </div>
+                <div style="background:#fef3c7;border:1px solid var(--amber-border);border-radius:8px;overflow:hidden;">
+                  <div style="padding:7px 12px;font-size:11px;font-weight:700;color:var(--amber);border-bottom:1px solid var(--amber-border);">⚠️ 同期 act（不完全）</div>
+                  <pre style="font-size:12px;padding:12px;background:var(--code-bg);color:var(--code-text);margin:0;"><code><span class="fn">afterEach</span>(() => {
+  <span class="fn">act</span>(() =>
+    jest.<span class="fn">runOnlyPendingTimers</span>())
+  jest.<span class="fn">useRealTimers</span>()
+})
+<span class="cm">// Promise が await されない</span></code></pre>
+                </div>
+                <div style="background:var(--green-dim);border:1px solid var(--green-border);border-radius:8px;overflow:hidden;">
+                  <div style="padding:7px 12px;font-size:11px;font-weight:700;color:var(--green);border-bottom:1px solid var(--green-border);">✅ 非同期 act（正解）</div>
+                  <pre style="font-size:12px;padding:12px;background:var(--code-bg);color:var(--code-text);margin:0;"><code><span class="fn">afterEach</span>(<span class="kw">async</span> () => {
+  <span class="kw">await</span> <span class="fn">act</span>(<span class="kw">async</span> () =>
+    jest.<span class="fn">runOnlyPendingTimers</span>())
+  jest.<span class="fn">useRealTimers</span>()
+})</code></pre>
+                </div>
+              </div>
+              <p style="margin:0 0 10px;font-size:14px;">
+                <strong><code>act()</code> とは：</strong>「この処理の中で state が変わるよ」と React に伝える関数。
+                React 18 では state 更新が非同期で処理されるため、同期の <code>act()</code> では更新の完了を待てない。
+              </p>
+              <p style="margin:0;font-size:14px;">
+                <code>await</code> は<strong>非同期関数の中でしか使えない</strong>ため、<code>afterEach</code> のコールバック自体も
+                <code>async () =&gt; {}</code> にする必要がある。<code>afterEach</code> は async 関数を渡すと
+                その Promise が解決するまで Jest が待ってくれる。
+              </p>
+            </div>
+          </div>
+
+          <div class="code-block">
+            <div class="code-header">
+              <div class="code-dots"><div class="code-dot r"></div><div class="code-dot y"></div><div class="code-dot g"></div></div>
+              <span class="code-filename">app/(protected)/_components/Toaster.test.tsx</span>
+              <span class="code-lang">tsx</span>
+            </div>
+            <pre><code><span class="kw">import</span> { act, render, screen } <span class="kw">from</span> <span class="st">'@testing-library/react'</span>
+<span class="kw">import</span> userEvent                <span class="kw">from</span> <span class="st">'@testing-library/user-event'</span>
+
+<span class="kw">import</span> <span class="ty">Toaster</span>                        <span class="kw">from</span> <span class="st">'./Toaster'</span>
+<span class="kw">import</span> { <span class="ty">ToastProvider</span>, useToast } <span class="kw">from</span> <span class="st">'./ToastContext'</span>
+
+<span class="cm">// テスト用ヘルパー: Provider 内から addToast を発火するボタン</span>
+<span class="kw">function</span> <span class="fn">TriggerButton</span>({
+  message,
+  variant,
+}: {
+  message: <span class="ty">string</span>
+  variant?: <span class="st">'success'</span> | <span class="st">'error'</span> | <span class="st">'info'</span>
+}) {
+  <span class="kw">const</span> { addToast } = useToast()
+  <span class="kw">return</span> (
+    &lt;button type=<span class="st">"button"</span> onClick={() => addToast(message, variant)}&gt;
+      トースト追加
+    &lt;/button&gt;
+  )
+}
+
+<span class="cm">// Provider + Toaster をまとめた Wrapper</span>
+<span class="kw">function</span> <span class="fn">Wrapper</span>({ children }: { children: <span class="ty">React.ReactNode</span> }) {
+  <span class="kw">return</span> (
+    &lt;<span class="ty">ToastProvider</span>&gt;
+      {children}
+      &lt;<span class="ty">Toaster</span> /&gt;
+    &lt;/<span class="ty">ToastProvider</span>&gt;
+  )
+}
+
+describe(<span class="st">'Toaster'</span>, () => {
+  beforeEach(() => jest.useFakeTimers())
+  afterEach(() => {
+    act(() => jest.runOnlyPendingTimers())
+    jest.useRealTimers()
+  })
+
+  test(<span class="st">'addToast を呼ぶとトーストが表示される'</span>, <span class="kw">async</span> () => {
+    <span class="kw">const</span> user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime })
+    render(
+      &lt;<span class="ty">Wrapper</span>&gt;
+        &lt;<span class="fn">TriggerButton</span> message=<span class="st">"登録しました"</span> variant=<span class="st">"success"</span> /&gt;
+      &lt;/<span class="ty">Wrapper</span>&gt;,
+    )
+    <span class="kw">await</span> user.click(screen.getByRole(<span class="st">'button'</span>, { name: <span class="st">'トースト追加'</span> }))
+    expect(screen.getByText(<span class="st">'登録しました'</span>)).toBeInTheDocument()
+  })
+
+  test(<span class="st">'3 秒後に自動で消える'</span>, <span class="kw">async</span> () => {
+    <span class="kw">const</span> user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime })
+    render(
+      &lt;<span class="ty">Wrapper</span>&gt;
+        &lt;<span class="fn">TriggerButton</span> message=<span class="st">"登録しました"</span> variant=<span class="st">"success"</span> /&gt;
+      &lt;/<span class="ty">Wrapper</span>&gt;,
+    )
+    <span class="kw">await</span> user.click(screen.getByRole(<span class="st">'button'</span>, { name: <span class="st">'トースト追加'</span> }))
+    expect(screen.getByText(<span class="st">'登録しました'</span>)).toBeInTheDocument()
+
+    <span class="kw">await</span> <span class="fn">act</span>(<span class="kw">async</span> () => { jest.<span class="fn">advanceTimersByTime</span>(<span class="nu">3_000</span>) })
+    expect(screen.queryByText(<span class="st">'登録しました'</span>)).not.toBeInTheDocument()
+  })</code></pre>
+          </div>
+
+          <div class="callout tip">
+            <span class="callout-icon">💡</span>
+            <div class="callout-body">
+              <span class="callout-title"><code>await act(async () =&gt; &#123; jest.advanceTimersByTime(3_000) &#125;)</code> の読み方</span>
+              <p style="margin-bottom:14px;">3 つのパーツに分解して読む。</p>
+              <div class="arch-diagram" style="margin:0 0 14px;">
+                <div style="font-family:'SF Mono','Cascadia Code',monospace;font-size:13px;text-align:center;padding:10px 0 18px;line-height:2.2;">
+                  <span style="background:var(--green-dim);color:var(--green);border:1px solid var(--green-border);padding:3px 10px;border-radius:6px;font-weight:700;">await</span>
+                  <span style="color:var(--text-light);padding:0 6px;">  </span>
+                  <span style="background:var(--blue-dim);color:var(--blue);border:1px solid var(--blue-border);padding:3px 10px;border-radius:6px;font-weight:700;">act(async () =&gt; &#123; ... &#125;)</span>
+                  <span style="color:var(--text-light);padding:0 6px;">  </span>
+                  <span style="background:var(--accent-dim);color:var(--accent);border:1px solid #c7d2fe;padding:3px 10px;border-radius:6px;font-weight:700;">jest.advanceTimersByTime(3_000)</span>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+                  <div style="background:var(--green-dim);border:1px solid var(--green-border);border-radius:8px;padding:12px;">
+                    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--green);margin-bottom:6px;">① await</div>
+                    <p style="font-size:13px;color:#14532d;margin:0;line-height:1.7;">
+                      <code>act()</code> が返す Promise を待つ。これがないと state 更新が終わる前に次の行に進んでしまう。
+                    </p>
+                  </div>
+                  <div style="background:var(--blue-dim);border:1px solid var(--blue-border);border-radius:8px;padding:12px;">
+                    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--blue);margin-bottom:6px;">② act(async () =&gt; &#123;&#125;)</div>
+                    <p style="font-size:13px;color:#1e3a8a;margin:0;line-height:1.7;">
+                      「この中で React の state が変わるよ」と伝える。<code>async</code> にすることで再レンダリングなど非同期の処理が全部終わるまで待つ。
+                    </p>
+                  </div>
+                  <div style="background:var(--accent-dim);border:1px solid #c7d2fe;border-radius:8px;padding:12px;">
+                    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--accent);margin-bottom:6px;">③ advanceTimersByTime</div>
+                    <p style="font-size:13px;color:#3730a3;margin:0;line-height:1.7;">
+                      フェイクタイマーを 3 秒進める。これで <code>setTimeout(removeToast, 3000)</code> が発火する。
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <p style="margin:0;font-size:14px;line-height:1.75;">
+                まとめると「タイマーを 3 秒進めて、それによる state 更新と再レンダリングが全部終わってから次のアサーションに進む」という 1 行。
+              </p>
+            </div>
+          </div>
+
+          <div class="code-block">
+            <div class="code-header">
+              <div class="code-dots"><div class="code-dot r"></div><div class="code-dot y"></div><div class="code-dot g"></div></div>
+              <span class="code-filename">（続き）</span>
+              <span class="code-lang">tsx</span>
+            </div>
+            <pre><code>
+  test(<span class="st">'複数のトーストを同時に表示できる'</span>, <span class="kw">async</span> () => {
+    <span class="kw">const</span> user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime })
+    render(
+      &lt;<span class="ty">Wrapper</span>&gt;
+        &lt;<span class="fn">TriggerButton</span> message=<span class="st">"メッセージ"</span> variant=<span class="st">"info"</span> /&gt;
+      &lt;/<span class="ty">Wrapper</span>&gt;,
+    )
+    <span class="kw">await</span> user.click(screen.getByRole(<span class="st">'button'</span>, { name: <span class="st">'トースト追加'</span> }))
+    <span class="kw">await</span> user.click(screen.getByRole(<span class="st">'button'</span>, { name: <span class="st">'トースト追加'</span> }))
+    expect(screen.getAllByText(<span class="st">'メッセージ'</span>)).toHaveLength(<span class="nu">2</span>)
+  })
+
+  test(<span class="st">'閉じるボタンを押すと即座に消える'</span>, <span class="kw">async</span> () => {
+    <span class="kw">const</span> user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime })
+    render(
+      &lt;<span class="ty">Wrapper</span>&gt;
+        &lt;<span class="fn">TriggerButton</span> message=<span class="st">"手動で閉じる"</span> variant=<span class="st">"info"</span> /&gt;
+      &lt;/<span class="ty">Wrapper</span>&gt;,
+    )
+    <span class="kw">await</span> user.click(screen.getByRole(<span class="st">'button'</span>, { name: <span class="st">'トースト追加'</span> }))
+    <span class="kw">await</span> user.click(screen.getByRole(<span class="st">'button'</span>, { name: <span class="st">'通知を閉じる'</span> }))
+    expect(screen.queryByText(<span class="st">'手動で閉じる'</span>)).not.toBeInTheDocument()
+  })
+
+  test(<span class="st">'通知領域に aria-live="polite" が設定されている'</span>, () => {
+    render(&lt;<span class="ty">Wrapper</span>&gt;&lt;div /&gt;&lt;/<span class="ty">Wrapper</span>&gt;)
+    expect(
+      screen.getByRole(<span class="st">'region'</span>, { name: <span class="st">'通知'</span> }),
+    ).toHaveAttribute(<span class="st">'aria-live'</span>, <span class="st">'polite'</span>)
+  })
+
+  test(<span class="st">'複数トーストのうち閉じるボタンを押したものだけ消える'</span>, <span class="kw">async</span> () => {
+    <span class="kw">const</span> user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime })
+    render(
+      &lt;<span class="ty">Wrapper</span>&gt;
+        &lt;<span class="fn">TriggerButton</span> message=<span class="st">"トースト1"</span> variant=<span class="st">"success"</span> /&gt;
+        &lt;<span class="fn">TriggerButton</span> message=<span class="st">"トースト2"</span> variant=<span class="st">"error"</span> /&gt;
+      &lt;/<span class="ty">Wrapper</span>&gt;,
+    )
+    <span class="kw">const</span> addButtons = screen.getAllByRole(<span class="st">'button'</span>, { name: <span class="st">'トースト追加'</span> })
+    <span class="kw">await</span> user.click(addButtons[<span class="nu">0</span>])
+    <span class="kw">await</span> user.click(addButtons[<span class="nu">1</span>])
+
+    <span class="kw">const</span> closeButtons = screen.getAllByRole(<span class="st">'button'</span>, { name: <span class="st">'通知を閉じる'</span> })
+    <span class="kw">await</span> user.click(closeButtons[<span class="nu">0</span>])  <span class="cm">// トースト1だけ閉じる</span>
+
+    expect(screen.queryByText(<span class="st">'トースト1'</span>)).not.toBeInTheDocument()
+    expect(screen.getByText(<span class="st">'トースト2'</span>)).toBeInTheDocument()
+  })
+
+  test(<span class="st">'3秒経過したトーストだけ消える'</span>, <span class="kw">async</span> () => {
+    <span class="kw">const</span> user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime })
+    render(
+      &lt;<span class="ty">Wrapper</span>&gt;
+        &lt;<span class="fn">TriggerButton</span> message=<span class="st">"先に追加"</span> variant=<span class="st">"success"</span> /&gt;
+        &lt;<span class="fn">TriggerButton</span> message=<span class="st">"後から追加"</span> variant=<span class="st">"info"</span> /&gt;
+      &lt;/<span class="ty">Wrapper</span>&gt;,
+    )
+    <span class="kw">await</span> user.click(screen.getAllByRole(<span class="st">'button'</span>, { name: <span class="st">'トースト追加'</span> })[<span class="nu">0</span>])
+
+    <span class="kw">await</span> <span class="fn">act</span>(<span class="kw">async</span> () => { jest.<span class="fn">advanceTimersByTime</span>(<span class="nu">1_000</span>) })  <span class="cm">// 1秒経過</span>
+
+    <span class="kw">await</span> user.click(screen.getAllByRole(<span class="st">'button'</span>, { name: <span class="st">'トースト追加'</span> })[<span class="nu">1</span>])
+
+    <span class="kw">await</span> <span class="fn">act</span>(<span class="kw">async</span> () => { jest.<span class="fn">advanceTimersByTime</span>(<span class="nu">2_000</span>) })  <span class="cm">// さらに2秒（合計3秒）</span>
+
+    expect(screen.queryByText(<span class="st">'先に追加'</span>)).not.toBeInTheDocument()   <span class="cm">// 合計3秒 → 消える</span>
+    expect(screen.getByText(<span class="st">'後から追加'</span>)).toBeInTheDocument()        <span class="cm">// 1秒しか経っていない → 残る</span>
+  })
+})</code></pre>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /steps-container -->
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ══════════════════════════════════════════
+       4. 動作確認
+  ══════════════════════════════════════════ -->
+  <div class="section" id="sec-verify">
+    <h2><span class="h2-num">4</span>動作確認手順</h2>
+    <p class="section-desc">手動確認と自動テストの両方で動作を保証する。</p>
+
+    <h3>4.1 一時的な確認用コードを追加</h3>
+
+    <div class="callout warn">
+      <span class="callout-icon">⚠️</span>
+      <div class="callout-body">
+        <span class="callout-title">現時点では <code>useToast()</code> を呼ぶページが未実装</span>
+        下記の確認用コードを <code>page.tsx</code> に<strong>一時追加</strong>して動作確認する。
+        確認後は必ず削除すること。
+      </div>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header">
+        <div class="code-dots"><div class="code-dot r"></div><div class="code-dot y"></div><div class="code-dot g"></div></div>
+        <span class="code-filename">app/(protected)/page.tsx （確認用 — 後で削除）</span>
+        <span class="code-lang">tsx</span>
+      </div>
+      <pre><code><span class="st">'use client'</span>
+
+<span class="kw">import</span> { useToast } <span class="kw">from</span> <span class="st">'./_components/ToastContext'</span>
+
+<span class="kw">export default function</span> <span class="fn">Page</span>() {
+  <span class="kw">const</span> { addToast } = useToast()
+  <span class="kw">return</span> (
+    &lt;div className=<span class="st">"flex gap-3 p-8"</span>&gt;
+      &lt;button onClick={() => addToast(<span class="st">'登録しました'</span>, <span class="st">'success'</span>)}&gt;Success&lt;/button&gt;
+      &lt;button onClick={() => addToast(<span class="st">'保存に失敗しました'</span>, <span class="st">'error'</span>)}&gt;Error&lt;/button&gt;
+      &lt;button onClick={() => addToast(<span class="st">'バッチが完了しました'</span>, <span class="st">'info'</span>)}&gt;Info&lt;/button&gt;
+    &lt;/div&gt;
+  )
+}</code></pre>
+    </div>
+
+    <h3>4.2 手動確認項目</h3>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>#</th><th>操作</th><th>期待結果</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td>Success ボタンをクリック</td><td>画面右上に緑のトーストが表示される</td></tr>
+          <tr><td>2</td><td>そのまま 3 秒待つ</td><td>トーストが自動で消える</td></tr>
+          <tr><td>3</td><td>各ボタンを連続クリック</td><td>複数トーストが縦に積み重なる</td></tr>
+          <tr><td>4</td><td>トーストの × ボタンをクリック</td><td>クリックしたものだけ即時消滅する</td></tr>
+          <tr><td>5</td><td>DevTools → Accessibility → 通知 region を確認</td><td><code>aria-live="polite"</code> が設定されている</td></tr>
+          <tr><td>6</td><td>Error / Info ボタンをクリック</td><td>それぞれ赤・青のトーストが表示される</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>4.3 自動テスト実行</h3>
+
+    <div class="code-block">
+      <div class="code-header">
+        <div class="code-dots"><div class="code-dot r"></div><div class="code-dot y"></div><div class="code-dot g"></div></div>
+        <span class="code-filename">Terminal</span>
+        <span class="code-lang">bash</span>
+      </div>
+      <pre><code><span class="cm"># 今回追加したテストのみ実行</span>
+npm test -- Toaster
+
+<span class="cm"># 既存テスト（NavLinks など）の回帰確認</span>
+npm test</code></pre>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ══════════════════════════════════════════
+       5. API クイックリファレンス
+  ══════════════════════════════════════════ -->
+  <div class="section" id="sec-api">
+    <h2><span class="h2-num">5</span>API クイックリファレンス</h2>
+    <p class="section-desc">後続イシューで使用するインターフェースをまとめる。</p>
+
+    <div class="api-card">
+      <div class="api-card-header">
+        <div>
+          <div class="api-fn-name">useToast()</div>
+          <div class="api-fn-sig">→ {'{ toasts, addToast, removeToast }'}</div>
+        </div>
+        <span class="badge client">Client</span>
+      </div>
+      <div class="api-card-body">
+        <p><code>ToastProvider</code> 配下であればどこからでも呼び出せる。Provider 外で呼ぶとエラーを throw する。</p>
+      </div>
+    </div>
+
+    <div class="api-card">
+      <div class="api-card-header">
+        <div>
+          <div class="api-fn-name">addToast</div>
+          <div class="api-fn-sig">(message: string, variant?: 'success' | 'error' | 'info') → void</div>
+        </div>
+      </div>
+      <div class="api-card-body">
+        <p><code>variant</code> を省略すると <code>'info'</code> が使われる。複数回呼ぶと複数のトーストが積み重なる。</p>
+
+        <div class="code-block" style="margin-top:8px;">
+          <div class="code-header" style="padding:6px 14px;">
+            <div class="code-dots"><div class="code-dot r"></div><div class="code-dot y"></div><div class="code-dot g"></div></div>
+            <span class="code-filename">使用例</span><span class="code-lang">tsx</span>
+          </div>
+          <pre style="padding:12px 16px;font-size:12px;"><code><span class="kw">const</span> { addToast } = useToast()
+
+addToast(<span class="st">'登録しました'</span>, <span class="st">'success'</span>)
+addToast(<span class="st">'保存に失敗しました'</span>, <span class="st">'error'</span>)
+addToast(<span class="st">'バッチが完了しました'</span>)  <span class="cm">// variant 省略 → 'info'</span></code></pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="api-card">
+      <div class="api-card-header">
+        <div>
+          <div class="api-fn-name">removeToast</div>
+          <div class="api-fn-sig">(id: string) → void</div>
+        </div>
+      </div>
+      <div class="api-card-body">
+        <p>指定した ID のトーストを即座に削除する。通常は <code>ToastItem</code> 内部から自動呼び出しされるため、外部から直接使う機会は少ない。</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ══════════════════════════════════════════
+       6. チェックリスト
+  ══════════════════════════════════════════ -->
+  <div class="section" id="sec-checklist">
+    <h2><span class="h2-num">6</span>実装チェックリスト</h2>
+    <p class="section-desc">クリックでチェックを付けられる。</p>
+
+    <ul class="checklist" id="checklist">
+      <li onclick="this.classList.toggle('done')">
+        <div class="chk-box">✓</div>
+        <span class="chk-label"><code>_components/ToastContext.tsx</code> を新規作成</span>
+      </li>
+      <li onclick="this.classList.toggle('done')">
+        <div class="chk-box">✓</div>
+        <span class="chk-label"><code>_components/Toaster.tsx</code> を新規作成</span>
+      </li>
+      <li onclick="this.classList.toggle('done')">
+        <div class="chk-box">✓</div>
+        <span class="chk-label"><code>(protected)/layout.tsx</code> を <code>ToastProvider</code> でラップし <code>&lt;Toaster /&gt;</code> を追加</span>
+      </li>
+      <li onclick="this.classList.toggle('done')">
+        <div class="chk-box">✓</div>
+        <span class="chk-label">3 種類（success / error / info）のトーストが表示される</span>
+      </li>
+      <li onclick="this.classList.toggle('done')">
+        <div class="chk-box">✓</div>
+        <span class="chk-label">3 秒後に自動消滅する</span>
+      </li>
+      <li onclick="this.classList.toggle('done')">
+        <div class="chk-box">✓</div>
+        <span class="chk-label">複数トーストを同時表示できる</span>
+      </li>
+      <li onclick="this.classList.toggle('done')">
+        <div class="chk-box">✓</div>
+        <span class="chk-label">× ボタンで手動消滅できる</span>
+      </li>
+      <li onclick="this.classList.toggle('done')">
+        <div class="chk-box">✓</div>
+        <span class="chk-label">通知領域に <code>role="region"</code> / <code>aria-live="polite"</code> / <code>aria-label="通知"</code> が付いている</span>
+      </li>
+      <li onclick="this.classList.toggle('done')">
+        <div class="chk-box">✓</div>
+        <span class="chk-label"><code>Toaster.test.tsx</code> 全 5 テストがグリーン</span>
+      </li>
+      <li onclick="this.classList.toggle('done')">
+        <div class="chk-box">✓</div>
+        <span class="chk-label">既存テスト（<code>NavLinks.test.tsx</code> 等）がリグレッションなくグリーン</span>
+      </li>
+      <li onclick="this.classList.toggle('done')">
+        <div class="chk-box">✓</div>
+        <span class="chk-label">確認用コードを <code>page.tsx</code> から削除</span>
+      </li>
+    </ul>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ══════════════════════════════════════════
+       7. Phase 4 連携メモ
+  ══════════════════════════════════════════ -->
+  <div class="section" id="sec-phase4">
+    <h2><span class="h2-num">7</span>Phase 4 連携メモ — SSE と <code>useToast</code> の接続</h2>
+    <p class="section-desc">
+      Phase 4 で実装する SSE クライアントから <code>addToast</code> を呼ぶ実装イメージ。
+      本イシューのフックをそのまま使える。
+    </p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <div class="code-dots"><div class="code-dot r"></div><div class="code-dot y"></div><div class="code-dot g"></div></div>
+        <span class="code-filename">Phase 4 実装イメージ（SSE クライアントコンポーネント）</span>
+        <span class="code-lang">tsx</span>
+      </div>
+      <pre><code><span class="st">'use client'</span>
+
+<span class="kw">import</span> { useEffect } <span class="kw">from</span> <span class="st">'react'</span>
+<span class="kw">import</span> { useToast } <span class="kw">from</span> <span class="st">'./_components/ToastContext'</span>
+
+<span class="kw">export function</span> <span class="fn">SseListener</span>() {
+  <span class="kw">const</span> { addToast } = useToast()
+
+  useEffect(() => {
+    <span class="kw">const</span> es = <span class="kw">new</span> EventSource(<span class="st">'/api/sse/events'</span>)
+
+    es.addEventListener(<span class="st">'batch-completed'</span>, (e) => {
+      <span class="kw">const</span> data = JSON.parse(e.data)
+      <span class="kw">const</span> ok   = data.status === <span class="st">'COMPLETED'</span>
+      addToast(
+        ok ? <span class="st">'バッチが完了しました'</span> : <span class="st">'バッチが失敗しました'</span>,
+        ok ? <span class="st">'success'</span>           : <span class="st">'error'</span>,
+      )
+    })
+
+    <span class="kw">return</span> () => es.close()
+  }, [addToast])
+
+  <span class="kw">return null</span>
+}</code></pre>
+    </div>
+
+    <div class="callout ok">
+      <span class="callout-icon">🔮</span>
+      <div class="callout-body">
+        <span class="callout-title">本番化向け改善案 — エラーを assertive で読み上げる</span>
+        WCAG 2.1 SC 4.1.3「ステータスメッセージ」に完全準拠するには、
+        <code>error</code> トーストを <code>aria-live="assertive"</code> の別リージョンで管理する。
+        <code>Toaster</code> を polite / assertive の 2 つのリージョンに分け、
+        <code>toasts.filter(t =&gt; t.variant !== 'error')</code> と
+        <code>toasts.filter(t =&gt; t.variant === 'error')</code> にそれぞれ流す実装にすることで対応できる。
+      </div>
+    </div>
+  </div>
+
+  <!-- ── FOOTER ── -->
+  <div id="footer">
+    <span>関連: 画面定義書 §3.2</span>
+    <span>テスト仕様書 §11</span>
+    <span>Issue #8 手順書 <code>doc/impl/issue-8-header.md</code></span>
+    <span>更新日: 2026-05-20</span>
+  </div>
+
+</main>
+
+<script>
+  /* ─── Scroll progress ─── */
+  const fill = document.getElementById('progress-fill');
+  const pct  = document.getElementById('progress-pct');
+  window.addEventListener('scroll', () => {
+    const h = document.documentElement;
+    const p = Math.round(h.scrollTop / (h.scrollHeight - h.clientHeight) * 100);
+    fill.style.width = p + '%';
+    pct.textContent  = p + '%';
+  });
+
+  /* ─── Active TOC link ─── */
+  const sections = document.querySelectorAll('[id]');
+  const links    = document.querySelectorAll('.toc-link');
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        links.forEach(l => l.classList.remove('active'));
+        const a = document.querySelector(`.toc-link[href="#${e.target.id}"]`);
+        if (a) a.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+  sections.forEach(s => obs.observe(s));
+
+  /* ─── Checklist persist ─── */
+  const items = document.querySelectorAll('#checklist li');
+  const saved = JSON.parse(localStorage.getItem('toast-checklist') || '[]');
+  items.forEach((li, i) => {
+    if (saved[i]) li.classList.add('done');
+    li.addEventListener('click', () => {
+      const state = [...items].map(l => l.classList.contains('done'));
+      localStorage.setItem('toast-checklist', JSON.stringify(state));
+    });
+  });
+</script>
+</body>
+</html>
