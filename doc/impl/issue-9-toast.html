@@ -734,6 +734,92 @@
     ═══════════════════════════════════════ */
     ul.prose { padding-left: 22px; margin-bottom: 14px; }
     ul.prose li { margin: 5px 0; font-size: 14px; line-height: 1.65; }
+
+    /* ═══════════════════════════════════════
+       Q&A CONVERSATION
+    ═══════════════════════════════════════ */
+    .qa-container { display: flex; flex-direction: column; gap: 16px; margin: 20px 0 28px; }
+
+    .qa-bubble {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      max-width: 92%;
+    }
+
+    .qa-bubble.q { align-self: flex-end; flex-direction: row-reverse; }
+    .qa-bubble.a { align-self: flex-start; }
+
+    .qa-avatar {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      font-size: 13px;
+      font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .qa-bubble.q .qa-avatar { background: var(--accent); color: white; }
+    .qa-bubble.a .qa-avatar { background: var(--surface2); color: var(--text-muted); border: 1px solid var(--border); }
+
+    .qa-body {
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-size: 14px;
+      line-height: 1.7;
+      box-shadow: var(--shadow);
+    }
+
+    .qa-bubble.q .qa-body {
+      background: var(--accent);
+      color: white;
+      border-bottom-right-radius: 4px;
+    }
+
+    .qa-bubble.a .qa-body {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-bottom-left-radius: 4px;
+    }
+
+    .qa-body p { margin-bottom: 8px; }
+    .qa-body p:last-child { margin-bottom: 0; }
+    .qa-body code {
+      background: rgba(255,255,255,.2);
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-size: 12px;
+      font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+    }
+    .qa-bubble.a .qa-body code {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--accent);
+    }
+
+    .qa-body pre {
+      background: var(--code-bg);
+      color: var(--code-text);
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-size: 12px;
+      line-height: 1.7;
+      overflow-x: auto;
+      margin: 8px 0 4px;
+    }
+
+    .qa-body ul { padding-left: 18px; margin: 6px 0; }
+    .qa-body li { margin: 3px 0; font-size: 14px; }
+
+    .qa-body table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 13px; }
+    .qa-body th {
+      background: var(--surface2); font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .5px; color: var(--text-muted);
+      padding: 6px 10px; border-bottom: 1px solid var(--border); text-align: left;
+    }
+    .qa-body td { padding: 7px 10px; border-bottom: 1px solid var(--border); }
+    .qa-body tr:last-child td { border-bottom: none; }
   </style>
 </head>
 <body>
@@ -772,6 +858,7 @@
     <a class="toc-link" href="#sec-api">API クイックリファレンス</a>
     <a class="toc-link" href="#sec-checklist">実装チェックリスト</a>
     <a class="toc-link" href="#sec-phase4">Phase 4 連携メモ</a>
+    <a class="toc-link" href="#sec-usecallback-qa">Q&amp;A — useCallback 深掘り</a>
   </div>
 
   <div id="sidebar-progress">
@@ -2355,6 +2442,157 @@ addToast(<span class="st">'バッチが完了しました'</span>)  <span class=
       </div>
     </div>
   </div>
+
+  <!-- ══════════════════════════════════════════
+       Q&A — useCallback 深掘り
+  ══════════════════════════════════════════ -->
+  <div class="section" id="sec-usecallback-qa">
+    <h2><span class="h2-num" style="font-size:18px;">Q&amp;A</span>useCallback 深掘り</h2>
+    <p class="section-desc"><code>ToastContext.tsx</code> の <code>useCallback</code> と <code>setState</code> 関数渡しについて、対話形式で掘り下げる。</p>
+
+    <div class="qa-container">
+
+      <!-- Q1 -->
+      <div class="qa-bubble q">
+        <div class="qa-avatar">Q</div>
+        <div class="qa-body">
+          <code>addToast</code> や <code>removeToast</code> で <code>useCallback</code> を使っている理由は、
+          プロバイダーコンポーネントが更新されるたびに関数が再作成されるのを防止するためだったっけ？
+        </div>
+      </div>
+
+      <!-- A1 -->
+      <div class="qa-bubble a">
+        <div class="qa-avatar">A</div>
+        <div class="qa-body">
+          <p>そのとおりです。ただ、このコードの場合は<strong>もう一段深い理由</strong>があります。</p>
+          <p><code>addToast</code> / <code>removeToast</code> は <code>value={{}}</code> でコンテキストに渡されます。</p>
+<pre><code>&lt;ToastContext value={{ toasts, addToast, removeToast }}&gt;</code></pre>
+          <p>この <code>value</code> オブジェクトは毎レンダリングで新しく作られます。
+          もし <code>addToast</code> が毎回新しい関数になっていると、<code>toasts</code> の変化と無関係な場面でも
+          「値が変わった」とみなされ、コンテキストを購読しているすべての子コンポーネントが再レンダリングされます。</p>
+          <p><code>useCallback</code> で関数参照を固定することで、
+          <strong><code>toasts</code> が変わったときだけ子が再レンダリングされる</strong>状態に近づけています。</p>
+        </div>
+      </div>
+
+      <!-- Q2 -->
+      <div class="qa-bubble q">
+        <div class="qa-avatar">Q</div>
+        <div class="qa-body">
+          なんで <code>setToasts((prev) =&gt; ...)</code> と関数形式で書くと、
+          <code>toasts</code> を依存配列に入れなくて済むようになるの？
+        </div>
+      </div>
+
+      <!-- A2 -->
+      <div class="qa-bubble a">
+        <div class="qa-avatar">A</div>
+        <div class="qa-body">
+          <p><code>setState</code> の2つの呼び方の違いから説明します。</p>
+<pre><code>// 値渡し
+setToasts([...toasts, newToast])
+//          ^^^^^^
+//          addToast が作られた時点でキャプチャされた toasts
+
+// 関数渡し
+setToasts((prev) => [...prev, newToast])
+//          ^^^^
+//          React が「今この瞬間の最新値」を引数として渡してくれる</code></pre>
+          <p><code>useCallback</code> の依存配列は「関数の中で参照している外部変数」を列挙するものです。
+          値渡しでは <code>toasts</code> という外部変数を参照しているため <code>[toasts]</code> が必要になります。
+          関数渡しでは <code>prev</code> は React から受け取る引数であり外部変数ではないため、依存配列を <code>[]</code> にできます。</p>
+        </div>
+      </div>
+
+      <!-- Q3 -->
+      <div class="qa-bubble q">
+        <div class="qa-avatar">Q</div>
+        <div class="qa-body">
+          まだわかんない。<code>setToasts([...toasts, newToast])</code> と書くと、
+          <code>toasts</code> に代入されるのは <code>addToast</code> が作られた時点の値で固定されてしまうの？
+          ステートの <code>toasts</code> が更新されたときに反映されないの？
+        </div>
+      </div>
+
+      <!-- A3 -->
+      <div class="qa-bubble a">
+        <div class="qa-avatar">A</div>
+        <div class="qa-body">
+          <p>そこがポイントです。<code>useCallback</code> に <code>[]</code> を渡すと関数が<strong>一度しか作られない</strong>ことが問題になります。</p>
+<pre><code>// 1回目のレンダリング
+toasts = []
+addToast が作られる → この時点の toasts（= []）を記憶する
+
+addToast("A") を呼ぶ
+  setToasts([...toasts, A])
+           ↑ 記憶していた [] を使う
+  → state が [A] になる
+
+// 2回目のレンダリング
+toasts = [A]
+でも addToast は [] のまま再作成されない！
+→ addToast の中の toasts はまだ [] のまま
+
+addToast("B") を呼ぶ
+  setToasts([...toasts, B])
+           ↑ 古い [] を使う（[A] ではない）
+  → state が [B] になる  ← [A, B] にならない！</code></pre>
+          <p>これを <strong>stale closure（古いクロージャ）</strong>と呼びます。</p>
+          <p>関数渡しなら <code>prev</code> に React が最新の state を注入してくれるため、クロージャに古い値が閉じ込められていても無関係です。</p>
+<pre><code>addToast("B") を呼ぶ
+  setToasts(prev => [...prev, B])
+                    ↑ React が最新の [A] を渡してくれる
+  → state が [A, B] になる ✅</code></pre>
+        </div>
+      </div>
+
+      <!-- Q4（ユーザーのまとめ） -->
+      <div class="qa-bubble q">
+        <div class="qa-avatar">Q</div>
+        <div class="qa-body">
+          <p>なるほど。つまりこういうこと？</p>
+          <ul>
+            <li><code>setToasts([...toasts, ...])</code> と書いた場合 → 依存配列に <code>[toasts]</code> が必要 → toasts が更新されるたびに addToast が再作成される → 子コンポーネントの不要な再レンダリングが生じる</li>
+            <li><code>setToasts((prev) => [...])</code> と書いた場合 → 依存配列は <code>[]</code> でよい → 関数が再作成されない → 子コンポーネントの不要な再レンダリングを防止できる</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- A4 -->
+      <div class="qa-bubble a">
+        <div class="qa-avatar">A</div>
+        <div class="qa-body">
+          <p>完璧です。図にまとめるとこうなります。</p>
+<pre><code>値渡し: setToasts([...toasts, newToast])
+  ↓
+依存配列に [toasts] が必要
+  ↓
+toasts が更新されるたびに addToast が再作成される
+  ↓
+value={{ toasts, addToast, removeToast }} が変わる
+  ↓
+コンテキストを購読している子コンポーネントが全部再レンダリング ❌
+
+
+関数渡し: setToasts(prev => [...prev, newToast])
+  ↓
+依存配列は [] でよい
+  ↓
+addToast は一度しか作られない（参照が変わらない）
+  ↓
+toasts が変わったときだけ子が再レンダリング ✅</code></pre>
+          <p style="margin-top:8px;">
+            <code>useState</code> の関数渡しは「<strong>stale closure を避けつつ <code>useCallback</code> の最適化を活かす</strong>」定番のパターンです。
+            今後 <code>useReducer</code> や他の <code>useState</code> を扱うときも同じ考え方が使えます。
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="divider"></div>
 
   <!-- ── FOOTER ── -->
   <div id="footer">

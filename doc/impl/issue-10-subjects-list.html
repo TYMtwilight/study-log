@@ -1,0 +1,2403 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Issue #10 科目マスター一覧画面実装手順書</title>
+  <style>
+    :root {
+      --bg:          #f1f5f9;
+      --surface:     #ffffff;
+      --surface2:    #f8fafc;
+      --border:      #e2e8f0;
+      --border2:     #cbd5e1;
+      --text:        #0f172a;
+      --text-muted:  #64748b;
+      --text-light:  #94a3b8;
+      --accent:      #6366f1;
+      --accent-dim:  #eef2ff;
+      --accent-dark: #4338ca;
+      --green:       #16a34a;
+      --green-dim:   #f0fdf4;
+      --green-border:#bbf7d0;
+      --red:         #dc2626;
+      --red-dim:     #fef2f2;
+      --red-border:  #fecaca;
+      --blue:        #2563eb;
+      --blue-dim:    #eff6ff;
+      --blue-border: #bfdbfe;
+      --amber:       #d97706;
+      --amber-dim:   #fffbeb;
+      --amber-border:#fde68a;
+      --code-bg:     #0f172a;
+      --code-text:   #e2e8f0;
+      --sidebar-w:   260px;
+      --r:           10px;
+      --r-sm:        6px;
+      --shadow:      0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.05);
+      --shadow-md:   0 4px 12px rgba(0,0,0,.10), 0 2px 4px rgba(0,0,0,.06);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans JP', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.75;
+      display: flex;
+      min-height: 100vh;
+      font-size: 15px;
+    }
+
+    /* ═══════════════════════════════════════
+       SIDEBAR
+    ═══════════════════════════════════════ */
+    #sidebar {
+      position: fixed; top: 0; left: 0;
+      width: var(--sidebar-w);
+      height: 100vh;
+      overflow-y: auto;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      z-index: 100;
+    }
+
+    #sidebar-header {
+      padding: 20px 18px 16px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .sidebar-issue {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+
+    .sidebar-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.35;
+    }
+
+    .sidebar-meta {
+      margin-top: 8px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    #toc { padding: 12px 10px; flex: 1; }
+
+    .toc-section {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-light);
+      padding: 10px 8px 4px;
+    }
+
+    .toc-link {
+      display: block;
+      padding: 5px 8px;
+      font-size: 13px;
+      color: var(--text-muted);
+      text-decoration: none;
+      border-radius: var(--r-sm);
+      transition: background .12s, color .12s;
+      line-height: 1.4;
+    }
+
+    .toc-link:hover { background: var(--accent-dim); color: var(--accent); }
+    .toc-link.active { background: var(--accent-dim); color: var(--accent); font-weight: 600; }
+    .toc-link.sub { padding-left: 20px; font-size: 12px; }
+
+    #sidebar-progress {
+      padding: 14px 18px;
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .progress-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .progress-bar {
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 2px;
+      transition: width .3s;
+      width: 0%;
+    }
+
+    /* ═══════════════════════════════════════
+       MAIN
+    ═══════════════════════════════════════ */
+    main {
+      margin-left: var(--sidebar-w);
+      max-width: 900px;
+      width: 100%;
+      padding: 0 0 100px;
+    }
+
+    /* ═══════════════════════════════════════
+       HERO
+    ═══════════════════════════════════════ */
+    #hero {
+      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #6366f1 100%);
+      padding: 48px 52px 44px;
+      color: white;
+    }
+
+    .hero-eyebrow {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      opacity: .75;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .hero-eyebrow::before {
+      content: '';
+      display: block;
+      width: 20px;
+      height: 2px;
+      background: rgba(255,255,255,.5);
+    }
+
+    #hero h1 {
+      font-size: 30px;
+      font-weight: 800;
+      line-height: 1.2;
+      letter-spacing: -.5px;
+      margin-bottom: 16px;
+    }
+
+    #hero p {
+      opacity: .85;
+      font-size: 15px;
+      max-width: 560px;
+      line-height: 1.65;
+      margin-bottom: 24px;
+    }
+
+    .hero-tags { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .hero-tag {
+      font-size: 12px;
+      font-weight: 500;
+      background: rgba(255,255,255,.15);
+      border: 1px solid rgba(255,255,255,.2);
+      padding: 4px 12px;
+      border-radius: 99px;
+    }
+
+    /* ═══════════════════════════════════════
+       WHAT YOU'LL BUILD CARDS
+    ═══════════════════════════════════════ */
+    #build-preview {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      padding: 32px 52px;
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .preview-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 16px;
+      box-shadow: var(--shadow);
+    }
+
+    .preview-card-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      margin-bottom: 10px;
+      color: var(--text-muted);
+    }
+
+    /* Mock table */
+    .mock-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+    .mock-table th {
+      text-align: left; font-size: 9px; text-transform: uppercase; letter-spacing: .5px;
+      color: var(--text-muted); padding: 4px 6px; border-bottom: 1px solid var(--border);
+    }
+    .mock-table td { padding: 6px; border-bottom: 1px solid var(--border); }
+    .mock-pill {
+      display: inline-block; font-size: 9px; padding: 2px 7px; border-radius: 5px;
+      border: 1px solid var(--border2); color: var(--text-muted); margin-left: 4px;
+    }
+    .mock-pill.del { border-color: var(--red-border); color: var(--red); }
+
+    /* Mock dialog */
+    .mock-dialog {
+      border: 1px solid var(--border); border-radius: 8px; padding: 12px;
+      background: var(--surface2); box-shadow: 0 2px 8px rgba(0,0,0,.08);
+    }
+    .mock-dialog-title { font-size: 12px; font-weight: 700; margin-bottom: 4px; }
+    .mock-dialog-msg { font-size: 10px; color: var(--text-muted); line-height: 1.5; margin-bottom: 10px; }
+    .mock-dialog-actions { display: flex; gap: 6px; justify-content: flex-end; }
+    .mock-btn { font-size: 10px; padding: 4px 10px; border-radius: 5px; border: 1px solid var(--border2); color: var(--text-muted); }
+    .mock-btn.danger { background: var(--red); color: white; border-color: var(--red); }
+
+    /* Mock toast */
+    .mock-toast {
+      display: flex; align-items: flex-start; gap: 10px; border-radius: 8px;
+      padding: 11px 14px; font-size: 13px; border-left: 4px solid;
+      box-shadow: 0 2px 8px rgba(0,0,0,.08);
+    }
+    .mock-toast.success { background: var(--green-dim); border-color: var(--green); color: #14532d; }
+    .mock-toast-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+    .mock-toast-msg { flex: 1; font-weight: 500; }
+    .mock-toast-x { opacity: .4; font-size: 11px; }
+
+    /* ═══════════════════════════════════════
+       CONTENT SECTIONS
+    ═══════════════════════════════════════ */
+    .section { padding: 44px 52px 0; }
+
+    h2 {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      line-height: 1.3;
+    }
+
+    .h2-num {
+      width: 32px; height: 32px;
+      background: var(--accent);
+      color: white;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .section-desc {
+      color: var(--text-muted);
+      font-size: 14px;
+      margin-bottom: 24px;
+      margin-top: 4px;
+    }
+
+    h3 {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text);
+      margin: 32px 0 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    h3::before {
+      content: '';
+      display: block;
+      width: 4px; height: 18px;
+      background: var(--accent);
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+
+    h4 {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      color: var(--text-muted);
+      margin: 20px 0 8px;
+    }
+
+    p { margin-bottom: 14px; color: var(--text); line-height: 1.75; }
+
+    /* ═══════════════════════════════════════
+       DIVIDER
+    ═══════════════════════════════════════ */
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 44px 0 0;
+    }
+
+    /* ═══════════════════════════════════════
+       TABLES
+    ═══════════════════════════════════════ */
+    .table-wrap {
+      overflow-x: auto;
+      margin: 14px 0 24px;
+      border-radius: var(--r);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+    }
+
+    table { width: 100%; border-collapse: collapse; font-size: 14px; background: var(--surface); }
+
+    th {
+      background: var(--surface2);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      color: var(--text-muted);
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+    }
+
+    td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+      line-height: 1.6;
+    }
+
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--surface2); }
+
+    /* ═══════════════════════════════════════
+       CODE BLOCKS
+    ═══════════════════════════════════════ */
+    .code-block {
+      margin: 14px 0 24px;
+      border-radius: var(--r);
+      overflow: hidden;
+      box-shadow: var(--shadow-md);
+    }
+
+    .code-header {
+      background: #1e293b;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .code-dots { display: flex; gap: 5px; }
+    .code-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+    }
+    .code-dot.r { background: #ff5f57; }
+    .code-dot.y { background: #ffbd2e; }
+    .code-dot.g { background: #28c840; }
+
+    .code-filename {
+      font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+      font-size: 12px;
+      color: #94a3b8;
+      flex: 1;
+    }
+
+    .code-lang {
+      font-size: 10px;
+      font-weight: 600;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+
+    pre {
+      background: var(--code-bg);
+      color: var(--code-text);
+      padding: 20px 22px;
+      font-size: 13px;
+      line-height: 1.7;
+      overflow-x: auto;
+      margin: 0;
+    }
+
+    code { font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', 'Consolas', monospace; }
+
+    :not(pre) > code {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-size: 13px;
+      color: var(--accent);
+    }
+
+    /* Syntax tokens */
+    .kw  { color: #7dd3fc; }
+    .st  { color: #86efac; }
+    .ty  { color: #fcd34d; }
+    .fn  { color: #c4b5fd; }
+    .cm  { color: #475569; font-style: italic; }
+    .nu  { color: #fb923c; }
+    .op  { color: #94a3b8; }
+    .hl  { background: rgba(99,102,241,.15); display: block; margin: 0 -22px; padding: 0 22px; }
+
+    /* ═══════════════════════════════════════
+       CALLOUTS
+    ═══════════════════════════════════════ */
+    .callout {
+      border-radius: var(--r);
+      padding: 16px 20px;
+      margin: 16px 0 24px;
+      font-size: 14px;
+      border: 1px solid;
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      line-height: 1.65;
+    }
+
+    .callout.info   { background: var(--blue-dim);  border-color: var(--blue-border); color: #1e3a8a; }
+    .callout.ok     { background: var(--green-dim); border-color: var(--green-border); color: #14532d; }
+    .callout.warn   { background: var(--amber-dim); border-color: var(--amber-border); color: #78350f; }
+    .callout.tip    { background: var(--accent-dim); border-color: #c7d2fe; color: #3730a3; }
+
+    .callout-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+    .callout-body { flex: 1; }
+    .callout-title { font-weight: 700; margin-bottom: 4px; display: block; }
+    .callout strong { font-weight: 700; }
+
+    /* ═══════════════════════════════════════
+       BADGES
+    ═══════════════════════════════════════ */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 9px;
+      border-radius: 99px;
+    }
+
+    .badge.new    { background: #dcfce7; color: #15803d; }
+    .badge.update { background: #dbeafe; color: #1d4ed8; }
+    .badge.client { background: #ede9fe; color: #6d28d9; }
+    .badge.server { background: #fef3c7; color: #b45309; }
+    .badge.route  { background: #ffe4e6; color: #be123c; }
+    .badge.test   { background: #f1f5f9; color: #475569; border: 1px solid var(--border); }
+
+    /* ═══════════════════════════════════════
+       ARCHITECTURE DIAGRAM
+    ═══════════════════════════════════════ */
+    .arch-diagram {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 24px;
+      margin: 14px 0 24px;
+      box-shadow: var(--shadow);
+    }
+
+    .arch-flow {
+      display: flex;
+      align-items: center;
+      margin: 12px 0 8px;
+      flex-wrap: wrap;
+      gap: 2px;
+    }
+
+    .flow-box {
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      text-align: center;
+      min-width: 110px;
+    }
+
+    .flow-arrow {
+      font-size: 18px;
+      color: var(--text-light);
+      padding: 0 4px;
+    }
+
+    .arch-node {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 2px 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .arch-node.route    { background: #ffe4e6; color: #be123c; }
+    .arch-node.client   { background: #dbeafe; color: #1d4ed8; }
+    .arch-node.store    { background: var(--surface2); color: var(--text-muted); border: 1px solid var(--border); }
+    .arch-label { font-size: 12px; color: var(--text-muted); font-weight: 400; }
+
+    /* ═══════════════════════════════════════
+       STEPS
+    ═══════════════════════════════════════ */
+    .steps-container { position: relative; }
+
+    .step {
+      display: grid;
+      grid-template-columns: 44px 1fr;
+      gap: 0 20px;
+      margin-bottom: 0;
+    }
+
+    .step-left {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .step-circle {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: white;
+      font-size: 15px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 0 0 4px var(--accent-dim);
+      z-index: 1;
+    }
+
+    .step-line {
+      width: 2px;
+      flex: 1;
+      background: linear-gradient(to bottom, var(--accent), var(--border));
+      margin-top: 8px;
+      min-height: 40px;
+    }
+
+    .step:last-child .step-line { display: none; }
+
+    .step-content {
+      padding-bottom: 40px;
+    }
+
+    .step-title {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.3;
+      margin-top: 5px;
+      margin-bottom: 10px;
+    }
+
+    /* ═══════════════════════════════════════
+       CHECKLIST
+    ═══════════════════════════════════════ */
+    .checklist { list-style: none; margin: 8px 0 24px; }
+
+    .checklist li {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 10px 14px;
+      border-radius: var(--r-sm);
+      cursor: pointer;
+      transition: background .1s;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .checklist li:last-child { border-bottom: none; }
+    .checklist li:hover { background: var(--surface2); }
+    .checklist li.done .chk-label { color: var(--text-muted); text-decoration: line-through; }
+
+    .chk-box {
+      width: 18px; height: 18px;
+      border: 2px solid var(--border2);
+      border-radius: 4px;
+      flex-shrink: 0;
+      margin-top: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      transition: background .15s, border-color .15s;
+    }
+
+    .done .chk-box {
+      background: var(--green);
+      border-color: var(--green);
+      color: white;
+    }
+
+    .chk-label { font-size: 14px; line-height: 1.5; }
+
+    /* ═══════════════════════════════════════
+       API QUICK REFERENCE
+    ═══════════════════════════════════════ */
+    .api-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      margin-bottom: 12px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .api-card-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .api-fn-name {
+      font-family: 'SF Mono', 'Cascadia Code', monospace;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .api-fn-sig {
+      font-family: 'SF Mono', 'Cascadia Code', monospace;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .api-card-body { padding: 12px 16px; font-size: 14px; }
+    .api-card-body p { margin-bottom: 6px; }
+
+    /* ═══════════════════════════════════════
+       FOOTER
+    ═══════════════════════════════════════ */
+    #footer {
+      margin: 44px 52px 0;
+      padding: 20px 0;
+      border-top: 1px solid var(--border);
+      font-size: 13px;
+      color: var(--text-muted);
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    /* ═══════════════════════════════════════
+       UTILS
+    ═══════════════════════════════════════ */
+    ul.prose { padding-left: 22px; margin-bottom: 14px; }
+    ul.prose li { margin: 5px 0; font-size: 14px; line-height: 1.65; }
+    ol.prose { padding-left: 22px; margin-bottom: 14px; }
+    ol.prose li { margin: 5px 0; font-size: 14px; line-height: 1.65; }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     SIDEBAR
+══════════════════════════════════════════ -->
+<nav id="sidebar">
+  <div id="sidebar-header">
+    <div class="sidebar-issue">Issue #10 · Phase 1</div>
+    <div class="sidebar-title">科目マスター<br>一覧画面実装</div>
+    <div class="sidebar-meta">React 19 · Next.js 16 · 2026-05-25</div>
+  </div>
+
+  <div id="toc">
+    <div class="toc-section">概要</div>
+    <a class="toc-link" href="#sec-overview">完了条件の確認</a>
+    <a class="toc-link" href="#sec-files">実装ファイル一覧</a>
+
+    <div class="toc-section">設計方針</div>
+    <a class="toc-link" href="#sec-arch">アーキテクチャ全体像</a>
+    <a class="toc-link sub" href="#sec-why-client">なぜ Client 取得か</a>
+    <a class="toc-link sub" href="#sec-mock">Route Handler モック</a>
+    <a class="toc-link sub" href="#sec-delete-flow">削除フローと状態</a>
+    <a class="toc-link sub" href="#sec-dialog">確認ダイアログの a11y</a>
+    <a class="toc-link sub" href="#sec-stub">スタブと認証</a>
+
+    <div class="toc-section">実装</div>
+    <a class="toc-link" href="#sec-impl">実装ステップ</a>
+    <a class="toc-link sub" href="#step1">1 — 型定義</a>
+    <a class="toc-link sub" href="#step2">2 — モックストア</a>
+    <a class="toc-link sub" href="#step3">3 — GET ハンドラ</a>
+    <a class="toc-link sub" href="#step4">4 — DELETE ハンドラ</a>
+    <a class="toc-link sub" href="#step5">5 — API クライアント</a>
+    <a class="toc-link sub" href="#step6">6 — ConfirmDialog</a>
+    <a class="toc-link sub" href="#step7">7 — SubjectList</a>
+    <a class="toc-link sub" href="#step8">8 — page.tsx</a>
+    <a class="toc-link sub" href="#step9">9 — スタブ</a>
+    <a class="toc-link sub" href="#step10">10 — 単体テスト</a>
+
+    <div class="toc-section">確認・参考</div>
+    <a class="toc-link" href="#sec-verify">動作確認手順</a>
+    <a class="toc-link" href="#sec-api">API クイックリファレンス</a>
+    <a class="toc-link" href="#sec-checklist">実装チェックリスト</a>
+    <a class="toc-link" href="#sec-phase2">Phase 2 連携メモ</a>
+  </div>
+
+  <div id="sidebar-progress">
+    <div class="progress-label">
+      <span>読み進め度</span>
+      <span id="progress-pct">0%</span>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+  </div>
+</nav>
+
+<!-- ══════════════════════════════════════════
+     MAIN
+══════════════════════════════════════════ -->
+<main>
+
+  <!-- ── HERO ── -->
+  <div id="hero">
+    <div class="hero-eyebrow">実装手順書</div>
+    <h1>科目マスター<br>一覧画面</h1>
+    <p>
+      <code style="background:rgba(255,255,255,.15);border:none;color:white;padding:1px 6px;border-radius:4px;">/subjects</code>
+      で科目の一覧を表示し、確認ダイアログ付きで削除する画面を実装する。
+      Phase 1 ではバックエンド（Spring Boot）がまだ無いため、<strong>Next.js の Route Handler を「モック API」</strong>として用意し、
+      ブラウザからそこへ <code style="background:rgba(255,255,255,.15);border:none;color:white;padding:1px 6px;border-radius:4px;">fetch</code> する構成にする。
+      Phase 2 で接続先を Spring Boot に差し替えるだけで済むよう設計する。
+    </p>
+    <div class="hero-tags">
+      <span class="hero-tag">React 19</span>
+      <span class="hero-tag">Next.js 16 App Router</span>
+      <span class="hero-tag">TypeScript</span>
+      <span class="hero-tag">Tailwind CSS v4</span>
+      <span class="hero-tag">Route Handler (Mock)</span>
+      <span class="hero-tag">Jest + Testing Library</span>
+    </div>
+  </div>
+
+  <!-- ── WHAT YOU'LL BUILD ── -->
+  <div id="build-preview">
+    <div class="preview-card">
+      <div class="preview-card-label">📋 科目一覧テーブル</div>
+      <table class="mock-table">
+        <thead><tr><th>科目名</th><th>登録日</th><th style="text-align:right;">操作</th></tr></thead>
+        <tbody>
+          <tr><td>Spring Boot</td><td>2026/01/10</td><td style="text-align:right;"><span class="mock-pill">編集</span><span class="mock-pill del">削除</span></td></tr>
+          <tr><td>Next.js</td><td>2026/02/15</td><td style="text-align:right;"><span class="mock-pill">編集</span><span class="mock-pill del">削除</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="preview-card">
+      <div class="preview-card-label">⚠️ 削除確認ダイアログ</div>
+      <div class="mock-dialog">
+        <div class="mock-dialog-title">科目を削除しますか？</div>
+        <div class="mock-dialog-msg">科目を削除すると、関連する学習ログもすべて削除されます。よろしいですか？</div>
+        <div class="mock-dialog-actions">
+          <span class="mock-btn">キャンセル</span>
+          <span class="mock-btn danger">削除する</span>
+        </div>
+      </div>
+    </div>
+    <div class="preview-card">
+      <div class="preview-card-label">✅ 削除完了トースト</div>
+      <div class="mock-toast success">
+        <span class="mock-toast-icon">✓</span>
+        <span class="mock-toast-msg">科目を削除しました</span>
+        <span class="mock-toast-x">✕</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       1. 完了条件
+  ══════════════════════════════════════════ -->
+  <div class="section" id="sec-overview">
+    <h2><span class="h2-num">1</span>完了条件の確認</h2>
+    <p class="section-desc">イシューの完了条件と、本手順書での実現方法を対応づける。</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>#</th><th>完了条件</th><th>実現方法</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td>科目名・登録日・操作列（編集・削除）を表示する</td>
+            <td>✅ <code>SubjectList</code> のテーブル（Step 7）</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td>「科目を追加」ボタンで <code>/subjects/new</code> へ遷移</td>
+            <td>✅ <code>page.tsx</code> の <code>&lt;Link&gt;</code>（Step 8）</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td>「編集」ボタンで <code>/subjects/[id]/edit</code> へ遷移</td>
+            <td>✅ 各行の <code>&lt;Link&gt;</code>（Step 7）</td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td>「削除」押下時に確認ダイアログを表示（キャンセルで中止）</td>
+            <td>✅ <code>ConfirmDialog</code>（Step 6・7）</td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td>確認で DELETE API を呼び、成功後に一覧更新＋トースト表示</td>
+            <td>✅ <code>deleteSubject</code> → state から除外 → <code>addToast</code>（Step 7）</td>
+          </tr>
+          <tr>
+            <td>6</td>
+            <td>削除失敗時にエラートーストを表示する</td>
+            <td>✅ <code>try / catch</code> で <code>addToast(..., 'error')</code>（Step 7）</td>
+          </tr>
+          <tr>
+            <td>—</td>
+            <td>使用 API: <code>GET /api/subjects</code> / <code>DELETE /api/subjects/{id}</code></td>
+            <td>✅ Route Handler モックとして自作（Step 3・4）</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout tip">
+      <span class="callout-icon">💡</span>
+      <div class="callout-body">
+        <span class="callout-title">このイシューは Phase 1 で初めて「業務データを API から取得する」機能</span>
+        認証（#5〜#7）・ヘッダー（#8）・トースト基盤（#9）はデータ取得を伴わなかった。
+        本イシューで作る「<strong>モック Route Handler → API クライアント → 画面</strong>」の3層構造が、
+        以降の学習ログ CRUD などすべての画面で再利用される土台になる。丁寧に作る価値が高い。
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ══════════════════════════════════════════
+       ファイル一覧
+  ══════════════════════════════════════════ -->
+  <div class="section" id="sec-files">
+    <h2><span class="h2-num" style="background:var(--text-muted)">→</span>実装ファイル一覧</h2>
+    <p class="section-desc">新規 9 ファイル、更新 1 ファイル。<code>frontend/</code> 配下のパスで示す。</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>操作</th><th>ファイルパス</th><th>種別</th><th>役割</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><span class="badge new">新規</span></td><td><code>types/subject.ts</code></td><td><span class="badge test">Type</span></td><td><code>Subject</code> 型の定義（API 仕様 §5 準拠）</td></tr>
+          <tr><td><span class="badge new">新規</span></td><td><code>lib/subjects/mockStore.ts</code></td><td><span class="badge server">Server</span></td><td>Phase 1 の仮データ置き場（メモリ上の配列）</td></tr>
+          <tr><td><span class="badge new">新規</span></td><td><code>app/api/subjects/route.ts</code></td><td><span class="badge route">Route</span></td><td><code>GET</code> — 科目一覧を返すモック API</td></tr>
+          <tr><td><span class="badge new">新規</span></td><td><code>app/api/subjects/[id]/route.ts</code></td><td><span class="badge route">Route</span></td><td><code>DELETE</code> — 科目を削除するモック API</td></tr>
+          <tr><td><span class="badge new">新規</span></td><td><code>lib/api/subjects.ts</code></td><td><span class="badge client">Client</span></td><td>画面から呼ぶ API クライアント（fetch ラッパー）</td></tr>
+          <tr><td><span class="badge new">新規</span></td><td><code>app/(protected)/subjects/_components/ConfirmDialog.tsx</code></td><td><span class="badge client">Client</span></td><td>再利用可能な確認ダイアログ</td></tr>
+          <tr><td><span class="badge new">新規</span></td><td><code>app/(protected)/subjects/_components/SubjectList.tsx</code></td><td><span class="badge client">Client</span></td><td>一覧取得・表示・削除を担う本体</td></tr>
+          <tr><td><span class="badge update">更新</span></td><td><code>app/(protected)/subjects/page.tsx</code></td><td><span class="badge server">Server</span></td><td>「準備中」スタブを置き換え。見出し＋追加ボタン＋<code>&lt;SubjectList /&gt;</code></td></tr>
+          <tr><td><span class="badge new">新規</span></td><td><code>app/(protected)/subjects/new/page.tsx</code></td><td><span class="badge server">Server</span></td><td>遷移先スタブ（科目登録／別イシュー）</td></tr>
+          <tr><td><span class="badge new">新規</span></td><td><code>app/(protected)/subjects/[id]/edit/page.tsx</code></td><td><span class="badge server">Server</span></td><td>遷移先スタブ（科目編集／別イシュー）</td></tr>
+          <tr><td><span class="badge new">新規</span></td><td><code>app/(protected)/subjects/_components/SubjectList.test.tsx</code></td><td><span class="badge test">Test</span></td><td>Jest + Testing Library による単体テスト</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout info">
+      <span class="callout-icon">📁</span>
+      <div class="callout-body">
+        <span class="callout-title"><code>lib/</code> と <code>_components/</code> の使い分け</span>
+        <code>lib/</code> は React に依存しない<strong>ロジック</strong>（型・データ・fetch）を置く新設フォルダ。
+        画面に依存しないので、後で別の画面からも import できる。<br>
+        一方 <code>_components/</code> は App Router の慣習で、<strong>その配下のルートでだけ使う UI 部品</strong>を置く（先頭の <code>_</code> はルーティング対象外の印）。
+        既に <code>(protected)/_components/</code> にヘッダーやトーストがある。
+      </div>
+    </div>
+
+    <div class="callout warn">
+      <span class="callout-icon">🤔</span>
+      <div class="callout-body">
+        <span class="callout-title">「<code>api</code> という名前のフォルダが2つある」混乱しやすいポイント</span>
+        <code>app/api/</code> と <code>lib/api/</code> は名前が似ているが、<strong>役割がまったく違う</strong>。
+        <div class="table-wrap" style="margin:10px 0 0;">
+          <table style="font-size:13px;">
+            <thead><tr><th>フォルダ</th><th>役割</th><th>誰が実行するか</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><code>app/api/</code></td>
+                <td>URL として公開される<strong>APIエンドポイント</strong>（Route Handler）。<br>ブラウザから <code>/api/subjects</code> にリクエストすると、ここのコードが動く</td>
+                <td>Next.js サーバー</td>
+              </tr>
+              <tr>
+                <td><code>lib/api/</code></td>
+                <td>そのエンドポイントを呼ぶ <strong>fetch ラッパー</strong>。<br><code>fetch('/api/subjects')</code> をまとめただけ</td>
+                <td>ブラウザ</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        通信の流れで見ると、<code>lib/api/</code> が「呼ぶ側」、<code>app/api/</code> が「受ける側」になっている。
+        <div class="code-block" style="margin:10px 0 0;">
+          <pre style="padding:12px 16px;font-size:12px;line-height:1.8;"><code>ブラウザ
+  └─ <span class="st">lib/api/subjects.ts</span>   <span class="cm">← fetch を呼ぶコード</span>
+       └─ fetch('<span class="st">/api/subjects</span>')
+            └─ <span class="st">app/api/subjects/route.ts</span>   <span class="cm">← リクエストを受けて応答するコード</span></code></pre>
+        </div>
+        <code>app/api/</code> は「サーバー側の URL」、<code>lib/api/</code> は「クライアント側の呼び出しコード」と覚えると整理しやすい。
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ══════════════════════════════════════════
+       2. 設計方針
+  ══════════════════════════════════════════ -->
+  <div class="section" id="sec-arch">
+    <h2><span class="h2-num">2</span>設計方針</h2>
+    <p class="section-desc">なぜこの構成にするのかを先に理解しておくと、コードの意図が見えてくる。</p>
+
+    <h3 id="sec-arch-flow">アーキテクチャ全体像</h3>
+    <p>
+      データは「<strong>モックストア → Route Handler（API）→ API クライアント → 画面</strong>」の一方向で流れる。
+      画面（ブラウザ）は同一オリジンの <code>/api/subjects</code> を <code>fetch</code> するだけで、データの実体（今はメモリ配列、将来は PostgreSQL）を知らない。
+    </p>
+
+    <div class="arch-diagram">
+      <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.8px;">Phase 1（今回つくるもの）— データの流れ</div>
+      <div class="arch-flow">
+        <div class="flow-box" style="background:#dbeafe;color:var(--blue);">ブラウザ<br><small>SubjectList</small></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box" style="background:var(--accent-dim);color:var(--accent);">lib/api<br><small>fetch()</small></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box" style="background:#ffe4e6;color:#be123c;">Route Handler<br><small>/api/subjects</small></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box" style="background:var(--surface2);color:var(--text);">mockStore<br><small>メモリ配列</small></div>
+      </div>
+      <div style="margin-top:18px;padding-top:14px;border-top:1px dashed var(--border);font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.8px;">Phase 2（将来）— 差し替えるのは1か所だけ</div>
+      <div class="arch-flow">
+        <div class="flow-box" style="background:#dbeafe;color:var(--blue);">ブラウザ<br><small>SubjectList</small></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box" style="background:var(--accent-dim);color:var(--accent);">lib/api<br><small>fetch()</small></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box" style="background:var(--green-dim);color:var(--green);">Spring Boot<br><small>:8080</small></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box" style="background:var(--surface2);color:var(--text);">PostgreSQL</div>
+      </div>
+      <p style="font-size:13px;color:var(--text-muted);margin:14px 0 0;">
+        画面（<code>SubjectList</code>）と API クライアントのインターフェース（<code>fetchSubjects</code> / <code>deleteSubject</code>）は変わらない。
+        <code>lib/api/subjects.ts</code> の接続先 URL を変えるだけで Phase 2 へ移行できる。
+      </p>
+    </div>
+
+    <h3 id="sec-why-client">なぜ「Client Component で取得」なのか</h3>
+    <p>
+      Next.js では、まず <strong>Server Component で取得する</strong>のが基本だ。だが今回は <strong>Client Component から <code>fetch</code></strong> する。理由は3つ。
+    </p>
+    <ul class="prose">
+      <li><strong>このアプリの設計がそうなっている。</strong> 要件定義書 §7 のとおり、本番はブラウザが Spring Boot REST API を「直接呼び出し」、Auth.js の JWT を <code>Authorization: Bearer</code> で送る方式。Client 取得はこの将来像と一致し、Phase 2 への移行が最小になる。</li>
+      <li><strong>削除→一覧更新→トーストが「画面の状態」の話だから。</strong> 削除後にどの行を消すか、どのトーストを出すかは <code>useState</code> で持つのが素直。Client Component が適任。</li>
+      <li><strong>自分の Route Handler を Server Component から呼ぶのは公式に非推奨。</strong> 下記の引用のとおり、Server Component は「データ源から直接」取得すべきで、自前の API を経由すると余計な HTTP 往復が発生する。今回は API（モック）越しに取りたいので、Client 取得が筋が通る。</li>
+    </ul>
+
+    <div class="callout info">
+      <span class="callout-icon">📖</span>
+      <div class="callout-body">
+        <span class="callout-title">Next.js 16 公式ドキュメントより（Backend for Frontend / Caveats）</span>
+        "Fetch data in Server Components directly from its source, not via Route Handlers. ...
+        For Server Components rendered on demand, fetching from Route Handlers is slower due to the extra HTTP round trip ...
+        However, fetching data client side might be necessary for ... frequently polled data. For these, use community libraries like <code>swr</code> or <code>react-query</code>."
+        <div style="margin-top:8px;font-size:13px;">
+          → 本イシューは「自前のモック API を介して取りたい」「削除のたびに最新化したい」ケースなので、Client 取得が適切。
+          まずは依存を増やさず <code>useEffect</code> + <code>useState</code> で実装し、必要になったら SWR への置き換えを検討する（§Phase 2 連携メモ参照）。
+        </div>
+      </div>
+    </div>
+
+    <h3 id="sec-mock">Route Handler を「モック API」にする仕組み</h3>
+    <p>
+      Route Handler は <code>app/.../route.ts</code> に <code>GET</code> / <code>DELETE</code> などの関数を <code>export</code> するだけで作れる、
+      Next.js 内蔵の API エンドポイントだ。これを Spring Boot の代役として使う。
+      データは <code>lib/subjects/mockStore.ts</code> の<strong>モジュールスコープの配列</strong>に持たせる。
+    </p>
+    <div class="callout warn">
+      <span class="callout-icon">⚠️</span>
+      <div class="callout-body">
+        <span class="callout-title">モックの限界（理解した上で使う）</span>
+        メモリ上の配列なので、<strong>開発サーバーを再起動するとデータは初期値に戻る</strong>。また本番のように複数プロセスで共有もされない。
+        Phase 1 の動作確認用と割り切る。Route Handler の <code>GET</code> は既定でキャッシュされない（Next.js 16 仕様）ため、配列の変更はそのまま反映される。
+      </div>
+    </div>
+
+    <h3 id="sec-delete-flow">削除フローと状態管理</h3>
+    <p>削除は「2段階（確認 → 実行）」。<code>SubjectList</code> は次の状態だけ持てばよい。</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>state</th><th>型</th><th>役割</th></tr></thead>
+        <tbody>
+          <tr><td><code>subjects</code></td><td><code>Subject[]</code></td><td>表示中の一覧。削除成功時にここから対象を除外する</td></tr>
+          <tr><td><code>loading</code></td><td><code>boolean</code></td><td>初回取得中フラグ（「読み込み中…」表示）</td></tr>
+          <tr><td><code>error</code></td><td><code>string | null</code></td><td>取得失敗時のメッセージ</td></tr>
+          <tr><td><code>pendingDelete</code></td><td><code>Subject | null</code></td><td>削除確認中の対象。<code>null</code> ＝ ダイアログ閉</td></tr>
+          <tr><td><code>deleting</code></td><td><code>boolean</code></td><td>削除 API 実行中フラグ（ボタン二度押し防止）</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="arch-diagram">
+      <div class="arch-flow">
+        <span class="arch-node client">削除クリック</span><span class="flow-arrow">→</span>
+        <span class="arch-label">setPendingDelete(対象)</span><span class="flow-arrow">→</span>
+        <span class="arch-node route">ダイアログ表示</span>
+      </div>
+      <div class="arch-flow" style="margin-top:12px;">
+        <span class="arch-node route">削除する</span><span class="flow-arrow">→</span>
+        <span class="arch-label">deleteSubject(id)</span><span class="flow-arrow">→</span>
+        <span class="arch-node store">成功: 配列から除外＋成功トースト</span>
+      </div>
+      <div class="arch-flow" style="margin-top:8px;">
+        <span class="flow-arrow" style="visibility:hidden;">→</span>
+        <span class="arch-label" style="visibility:hidden;">deleteSubject(id)</span><span class="flow-arrow">↘</span>
+        <span class="arch-node store" style="background:var(--red-dim);color:var(--red);border-color:var(--red-border);">失敗: エラートースト（一覧は維持）</span>
+      </div>
+    </div>
+    <p style="font-size:13px;color:var(--text-muted);">
+      ポイント：データは <code>subjects</code> state が「真実」なので、削除後は <code>setSubjects(prev =&gt; prev.filter(...))</code> で消すだけ。
+      Server Component を使っていないので <code>router.refresh()</code> は不要。
+    </p>
+
+    <h3 id="sec-dialog">確認ダイアログのアクセシビリティ</h3>
+    <p>
+      確認ダイアログには <code>window.confirm()</code> という手軽な手もあるが、見た目を整えられず「モダン」ではない。
+      自前の <code>ConfirmDialog</code> を作り、最低限のアクセシビリティを付ける。
+    </p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>属性 / 挙動</th><th>理由</th></tr></thead>
+        <tbody>
+          <tr><td><code>role="dialog"</code> + <code>aria-modal="true"</code></td><td>スクリーンリーダーに「いま操作すべきはこのダイアログ」と伝える</td></tr>
+          <tr><td><code>aria-labelledby</code> / <code>aria-describedby</code></td><td>見出しと本文をダイアログの名前・説明として関連づける</td></tr>
+          <tr><td>ESC キーで閉じる</td><td>キーボードだけでキャンセルできる（#8 の <code>NavLinks</code> と同じ <code>useEffect</code> パターン）</td></tr>
+          <tr><td>背景（バックドロップ）クリックで閉じる</td><td>マウス操作での離脱を自然にする。削除実行中は無効化</td></tr>
+          <tr><td>実行中はボタンを <code>disabled</code></td><td>二重送信を防ぐ</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout tip">
+      <span class="callout-icon">💡</span>
+      <div class="callout-body">
+        <span class="callout-title">なぜ <code>&lt;dialog&gt;</code> 要素ではなく自前の <code>&lt;div&gt;</code> か</span>
+        HTML 標準の <code>&lt;dialog&gt;</code> も良い選択肢だが、テスト環境（jsdom）の <code>showModal()</code> 対応が不安定。
+        本手順書では <code>open</code> state で表示を制御する <code>&lt;div&gt;</code> 方式にし、Jest で確実にテストできるようにする。
+      </div>
+    </div>
+
+    <h3 id="sec-aria-detail">ARIA 属性の詳細解説</h3>
+    <p>
+      <code>role="dialog"</code> など4つの属性は <strong>WAI-ARIA</strong>（Web Accessibility Initiative – Accessible Rich Internet Applications）という仕様の属性で、
+      スクリーンリーダーや支援技術に「この要素が何か・何と関係しているか」を伝える。通常の見た目には影響しない。
+    </p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>属性</th><th>何を伝えるか</th><th>これがないと</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>role="dialog"</code></td>
+            <td>「このdivはダイアログ（モーダル）だ」と支援技術に明示する。<br>素のdivには意味論的な役割がないため、スクリーンリーダーは見出しや段落と区別できない</td>
+            <td>スクリーンリーダーがダイアログと認識できず、単なるブロック要素として読み上げる</td>
+          </tr>
+          <tr>
+            <td><code>aria-modal="true"</code></td>
+            <td>「このダイアログが開いている間、背景（オーバーレイ外）のコンテンツには触れないこと」を支援技術に指示する</td>
+            <td>スクリーンリーダーがオーバーレイの裏にある本文まで読み続けてしまう。<code>true</code> を付けることで「今操作すべき範囲はここだけ」と閉じてくれる</td>
+          </tr>
+          <tr>
+            <td><code>aria-labelledby={titleId}</code></td>
+            <td><code>id={titleId}</code> を持つ要素（<code>&lt;h2&gt;</code> のタイトル）が<strong>このダイアログの名前</strong>であると関連づける。<br>ダイアログにフォーカスが移ったとき、スクリーンリーダーはそのテキストを「ダイアログの見出し」として読み上げる。<br><code>titleId</code> は <code>useId()</code> で生成した一意な値（例: <code>:r3:-title</code>）</td>
+            <td>ダイアログに名前がない状態になる（"dialog" とだけ読まれ、何のダイアログか分からない）</td>
+          </tr>
+          <tr>
+            <td><code>aria-describedby={descId}</code></td>
+            <td><code>id={descId}</code> を持つ要素（<code>&lt;p&gt;</code> の説明文）が<strong>このダイアログの説明</strong>であると関連づける。<br>タイトルに続けて説明文を読み上げ、ユーザーが内容を理解してから操作できる。<br><code>descId</code> は <code>useId()</code> で生成した一意な値（例: <code>:r3:-desc</code>）</td>
+            <td>スクリーンリーダーが説明文を自動では読まない。ユーザーが手動でフォーカスを移動させて初めて内容が分かる</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout ok">
+      <span class="callout-icon">✅</span>
+      <div class="callout-body">
+        <span class="callout-title"><code>useId()</code> で ARIA ID の重複問題を解決済み</span>
+        実装では <code>useId()</code> を使い、コンポーネントのインスタンスごとに異なる ID を生成している。
+        <code>aria-labelledby</code> / <code>aria-describedby</code> と対応する <code>h2</code> / <code>p</code> の <code>id</code> が一致することが保証される。
+        詳しくは Step 6 の callout「<code>useId()</code> とは何か」を参照。
+      </div>
+    </div>
+    <h3 id="sec-stub">遷移先スタブと認証</h3>
+    <p>
+      「科目を追加」「編集」のリンク先（<code>/subjects/new</code>・<code>/subjects/[id]/edit</code>）は別イシューでまだ未実装。
+      Issue #8 手順書 §2.5 のとおり、<strong>未実装ルートへ遷移 → 404 → ブラウザ戻る</strong> でヘッダーのハイドレーションが壊れる不具合があるため、
+      中身が空でも「ルートとして存在する」スタブを置いておく。
+    </p>
+    <div class="callout ok">
+      <span class="callout-icon">🔒</span>
+      <div class="callout-body">
+        <span class="callout-title">認証は <code>proxy.ts</code> が既に担保している</span>
+        Issue #6 で作った <code>frontend/proxy.ts</code> の matcher は <code>api/auth</code> 以外の全パスを対象にしている。
+        つまり <code>/api/subjects</code> も<strong>ログイン必須</strong>で守られている。
+        モックの Route Handler 側に追加の認証チェックを書く必要はない（Phase 2 で Spring Boot 側に JWT 検証を実装する）。
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ══════════════════════════════════════════
+       3. 実装ステップ
+  ══════════════════════════════════════════ -->
+  <div class="section" id="sec-impl">
+    <h2><span class="h2-num">3</span>実装ステップ</h2>
+    <p class="section-desc">下の層（データ）から上の層（画面）へ順に作ると、各ステップで動作を確かめながら進められる。</p>
+
+    <div class="steps-container">
+
+      <!-- STEP 1 -->
+      <div class="step" id="step1">
+        <div class="step-left"><div class="step-circle">1</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-title">型定義 — <code>types/subject.ts</code></div>
+          <p>API 仕様書 §5 の <code>Subject</code> を TypeScript の型にする。全ファイルがこの型を共有する。</p>
+          <div class="code-block">
+            <div class="code-header">
+              <div class="code-dots"><div class="code-dot r"></div><div class="code-dot y"></div><div class="code-dot g"></div></div>
+              <span class="code-filename">frontend/types/subject.ts</span><span class="code-lang">ts</span>
+            </div>
+<pre><code><span class="cm">// 科目マスター。API 仕様書 §5 の Subject に対応する。</span>
+<span class="kw">export type</span> <span class="ty">Subject</span> = {
+  id:        <span class="ty">string</span>   <span class="cm">// UUID</span>
+  name:      <span class="ty">string</span>   <span class="cm">// 科目名（1〜50文字）</span>
+  createdAt: <span class="ty">string</span>   <span class="cm">// 作成日時（ISO 8601 / 例: "2026-01-10T00:00:00Z"）</span>
+}</code></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 2 -->
+      <div class="step" id="step2">
+        <div class="step-left"><div class="step-circle">2</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-title">モックストア — <code>lib/subjects/mockStore.ts</code></div>
+          <p>Phase 1 の仮データと、それを操作する関数を置く。テスト仕様書 §15 のフィクスチャーを初期値にする。</p>
+          <div class="code-block">
+            <div class="code-header">
+              <div class="code-dots"><div class="code-dot r"></div><div class="code-dot y"></div><div class="code-dot g"></div></div>
+              <span class="code-filename">frontend/lib/subjects/mockStore.ts</span><span class="code-lang">ts</span>
+            </div>
+<pre><code><span class="kw">import type</span> { <span class="ty">Subject</span> } <span class="kw">from</span> <span class="st">'@/types/subject'</span>
+
+<span class="cm">// Phase 1 の仮データ。Phase 2 で Spring Boot + PostgreSQL に置き換える。</span>
+<span class="cm">// module スコープの配列なので、開発サーバーが起動している間だけ変更が保持される。</span>
+<span class="kw">let</span> subjects: <span class="ty">Subject</span>[] = [
+  { id: <span class="st">'660e8400-e29b-41d4-a716-446655440001'</span>, name: <span class="st">'Spring Boot'</span>, createdAt: <span class="st">'2026-01-10T00:00:00Z'</span> },
+  { id: <span class="st">'770e8400-e29b-41d4-a716-446655440002'</span>, name: <span class="st">'Next.js'</span>,     createdAt: <span class="st">'2026-02-15T00:00:00Z'</span> },
+  { id: <span class="st">'880e8400-e29b-41d4-a716-446655440003'</span>, name: <span class="st">'Zod'</span>,         createdAt: <span class="st">'2026-03-20T00:00:00Z'</span> },
+]
+
+<span class="cm">// 一覧を返す（コピーを返して、呼び出し側からの破壊的変更を防ぐ）</span>
+<span class="kw">export function</span> <span class="fn">getAllSubjects</span>(): <span class="ty">Subject</span>[] {
+  <span class="kw">return</span> [...subjects]
+}
+
+<span class="cm">// id で1件削除。削除できたら true、対象が無ければ false。</span>
+<span class="kw">export function</span> <span class="fn">deleteSubjectById</span>(id: <span class="ty">string</span>): <span class="ty">boolean</span> {
+  <span class="kw">const</span> before = subjects.length
+  subjects = subjects.filter((s) => s.id !== id)
+  <span class="kw">return</span> subjects.length &lt; before
+}</code></pre>
+          </div>
+          <div class="callout info">
+            <span class="callout-icon">🧭</span>
+            <div class="callout-body">
+              この層が将来「Spring Boot を呼ぶ」あるいは「PostgreSQL を引く」に化ける場所。
+              画面はここを直接触らず、必ず Route Handler（Step 3・4）越しにアクセスする。
+            </div>
+          </div>
+
+          <div class="callout tip">
+            <span class="callout-icon">💡</span>
+            <div class="callout-body">
+              <span class="callout-title">耳寄り — なぜ <code>return subjects</code> ではなく <code>return [...subjects]</code> か</span>
+              <code>subjects</code> はこのモジュールが持つ「在庫の本体」。参照をそのまま返すと、受け取った側が
+              <code>list.push(...)</code> や <code>list.sort()</code> をしただけで<strong>本体が書き換わってしまう</strong>。
+              削除は <code>deleteSubjectById</code> 経由でだけ行いたいので、コピー（<code>[...subjects]</code>）を返して本体を守る（＝カプセル化）。
+              <ul class="prose" style="margin:8px 0 0;">
+                <li>今回の唯一の呼び出し元は GET ハンドラの <code>Response.json(...)</code>（JSON 化するだけ）なので、<strong><code>return subjects</code> でも実害はない</strong>。それでも「外に渡す配列はコピーして返す」は低コストで良い習慣。</li>
+                <li><code>[...subjects]</code> は<strong>浅い（shallow）コピー</strong>。配列は新品でも、中の各オブジェクトは同じ参照のまま。そのため <code>getAllSubjects()[0].name = 'x'</code> のような変更は元にも届く点には注意（完全な防御ではない）。</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 3 -->
+      <div class="step" id="step3">
+        <div class="step-left"><div class="step-circle">3</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-title">GET ハンドラ — <code>app/api/subjects/route.ts</code></div>
+          <p><code>GET /api/subjects</code> を作る。モックストアの一覧を JSON で返すだけ（API 仕様 §4.2）。</p>
+          <div class="code-block">
+            <div class="code-header">
+              <div class="code-dots"><div class="code-dot r"></div><div class="code-dot y"></div><div class="code-dot g"></div></div>
+              <span class="code-filename">frontend/app/api/subjects/route.ts</span><span class="code-lang">ts</span>
+            </div>
+<pre><code><span class="kw">import</span> { <span class="fn">getAllSubjects</span> } <span class="kw">from</span> <span class="st">'@/lib/subjects/mockStore'</span>
+
+<span class="cm">// GET /api/subjects — 科目一覧を返す</span>
+<span class="kw">export async function</span> <span class="fn">GET</span>() {
+  <span class="kw">return</span> <span class="ty">Response</span>.<span class="fn">json</span>(<span class="fn">getAllSubjects</span>())
+}</code></pre>
+          </div>
+          <div class="callout tip">
+            <span class="callout-icon">💡</span>
+            <div class="callout-body">
+              <code>route.ts</code> は <code>page.tsx</code> と<strong>同じ階層に置けない</strong>。
+              幸い <code>/api/subjects</code> に対応するページは無いので問題ない。
+              Route Handler の <code>GET</code> は Next.js 16 では既定でキャッシュされないため、配列の変更が即反映される。
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 4 -->
+      <div class="step" id="step4">
+        <div class="step-left"><div class="step-circle">4</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-title">DELETE ハンドラ — <code>app/api/subjects/[id]/route.ts</code></div>
+          <p>
+            <code>DELETE /api/subjects/{id}</code> を作る。成功は <code>204 No Content</code>、対象が無ければ <code>404</code>（API 仕様 §4.2・§3.1）。
+            <code>[id]</code> という名前のフォルダが「動的な URL の一部」になる。
+          </p>
+          <div class="code-block">
+            <div class="code-header">
+              <div class="code-dots"><div class="code-dot r"></div><div class="code-dot y"></div><div class="code-dot g"></div></div>
+              <span class="code-filename">frontend/app/api/subjects/[id]/route.ts</span><span class="code-lang">ts</span>
+            </div>
+<pre><code><span class="kw">import</span> { <span class="fn">deleteSubjectById</span> } <span class="kw">from</span> <span class="st">'@/lib/subjects/mockStore'</span>
+
+<span class="cm">// DELETE /api/subjects/[id] — 科目を1件削除する</span>
+<span class="cm">// Next.js 16 では params は Promise なので await して取り出す。</span>
+<span class="kw">export async function</span> <span class="fn">DELETE</span>(
+  _request: <span class="ty">Request</span>,
+  { params }: { params: <span class="ty">Promise</span>&lt;{ id: <span class="ty">string</span> }&gt; },
+) {
+  <span class="kw">const</span> { id } = <span class="kw">await</span> params
+  <span class="kw">const</span> deleted = <span class="fn">deleteSubjectById</span>(id)
+
+  <span class="kw">if</span> (!deleted) {
+    <span class="kw">return</span> <span class="ty">Response</span>.<span class="fn">json</span>(
+      { code: <span class="st">'NOT_FOUND'</span>, message: <span class="st">'指定した科目が存在しません'</span> },
+      { status: <span class="nu">404</span> },
+    )
+  }
+
+  <span class="cm">// 204 はボディを持たない</span>
+  <span class="kw">return</span> <span class="kw">new</span> <span class="ty">Response</span>(<span class="kw">null</span>, { status: <span class="nu">204</span> })
+}</code></pre>
+          </div>
+          <div class="callout warn">
+            <span class="callout-icon">⚠️</span>
+            <div class="callout-body">
+              <span class="callout-title">Next.js 16 の落とし穴：<code>params</code> は Promise</span>
+              昔は <code>{ params }: { params: { id: string } }</code> と直接書けたが、Next.js 15 以降は <code>params</code> が <code>Promise</code> になった。
+              必ず <code>const { id } = await params</code> と <strong>await</strong> する。
+            </div>
+          </div>
+
+          <div class="callout tip">
+            <span class="callout-icon">💡</span>
+            <div class="callout-body">
+              <span class="callout-title">耳寄り — なぜ <code>_request</code> を引数に書くのか（使っていないのに）</span>
+              JavaScript の関数引数は<strong>位置で渡される</strong>。Next.js は必ず <code>DELETE(request, context)</code> の順で呼ぶため、
+              第2引数の <code>params</code> を受け取るには、第1引数の <code>request</code> を先に宣言しなければならない。
+              <br><br>
+              <strong>第1引数を飛ばして第2引数だけ受け取る構文は存在しない。</strong>
+              <div class="code-block" style="margin:10px 0 0;">
+                <pre style="padding:12px 16px;font-size:12px;line-height:1.6;"><code><span class="cm">// ❌ これは書けない。第1引数を飛ばして第2引数だけ受け取る構文はない</span>
+<span class="kw">export async function</span> <span class="fn">DELETE</span>({ params }: ...) {}
+
+<span class="cm">// ✅ 第1引数を宣言した上で、第2引数を受け取る</span>
+<span class="kw">export async function</span> <span class="fn">DELETE</span>(_request: <span class="ty">Request</span>, { params }: ...) {}</code></pre>
+              </div>
+              先頭の <code>_</code> は「型上は必要だが意図的に使わない」という TypeScript / ESLint の慣習。
+              <code>_</code> なしで <code>request</code> と書くと「定義したのに未使用」という lint エラーが出るため、<code>_</code> を付けて抑制する。
+            </div>
+          </div>
+
+          <div class="callout tip">
+            <span class="callout-icon">💡</span>
+            <div class="callout-body">
+              <span class="callout-title">耳寄り — <code>Response.json()</code> と <code>new Response(null, ...)</code> の使い分け</span>
+              使い分けの基準は <strong>「ボディがあるか・ないか」</strong>。
+              <div class="table-wrap" style="margin:10px 0 0;">
+                <table style="font-size:13px;">
+                  <thead><tr><th>書き方</th><th>ボディ</th><th>Content-Type</th><th>使う場面</th></tr></thead>
+                  <tbody>
+                    <tr>
+                      <td><code>Response.json(data, init)</code></td>
+                      <td>自動で JSON シリアライズ</td>
+                      <td>自動で <code>application/json</code></td>
+                      <td>JSON を返すとき（404 エラー含む）</td>
+                    </tr>
+                    <tr>
+                      <td><code>new Response(null, { status: 204 })</code></td>
+                      <td>なし（<code>null</code>）</td>
+                      <td>付かない</td>
+                      <td>204 など<strong>ボディが存在してはいけない</strong>ステータスのとき</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <code>Response.json()</code> は静的ファクトリメソッド（内部で <code>new</code> している）。
+              <code>new Response(null, ...)</code> はコンストラクタを直接呼んでいる。
+              <code>.json()</code> に <code>null</code> を渡すと <code>Content-Type: application/json</code> が付いてしまうため、ボディなしのときはコンストラクタ直呼びが正解。
+              <br><br>
+              <strong>なぜ <code>NextResponse</code> ではなく <code>Response</code> か？</strong><br>
+              <code>NextResponse</code> は <code>Response</code> を継承した Next.js 独自クラスで、Cookie 操作（<code>res.cookies.set()</code>）など
+              Next.js 固有の機能を追加している。しかし今回のような「JSON を返すだけ」「204 を返すだけ」のケースでは
+              その機能は一切使わない。Next.js 16 のドキュメントのサンプルコードも、不要なときはネイティブの
+              <code>Response</code> を使うパターンを推奨している。<code>NextResponse</code> を使わなければ
+              <code>import { NextResponse } from 'next/server'</code> も不要になる。
+            </div>
+          </div>
+
+          <div class="callout tip">
+            <span class="callout-icon">💡</span>
+            <div class="callout-body">
+              <span class="callout-title">耳寄り — <code>RouteContext</code> ヘルパーで型安全に（応用）</span>
+              現状は params の型を手書きしている。
+              <div class="code-block" style="margin:8px 0;">
+                <pre style="padding:12px 16px;font-size:12px;line-height:1.6;"><code><span class="cm">// 現状：自分で「id という文字列がある」と書く</span>
+{ params }: { params: <span class="ty">Promise</span>&lt;{ id: <span class="ty">string</span> }&gt; }
+
+<span class="cm">// RouteContext：パスを渡すと型が自動生成される（import 不要）</span>
+ctx: <span class="ty">RouteContext</span>&lt;<span class="st">'/api/subjects/[id]'</span>&gt;</code></pre>
+              </div>
+              手書きの場合、フォルダ名を <code>[subjectId]</code> に変えても型の <code>id</code> はそのまま残りエラーにならない。
+              <code>RouteContext</code> を使うとパス文字列と params の型が連動するため、ズレたときに TypeScript がエラーを出してくれる。
+              <br><br>
+              ただし「初心者のうちはどちらでもよい」。フォルダ名を変える機会は少なく、動作も同じ。
+              「こういう書き方もある」程度に覚えておけば十分。
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 5 -->
+      <div class="step" id="step5">
+        <div class="step-left"><div class="step-circle">5</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-title">API クライアント — <code>lib/api/subjects.ts</code></div>
+          <p>
+            画面から呼ぶ <code>fetch</code> をここに集約する。<strong>接続先 URL を1か所に閉じ込める</strong>のが狙いで、
+            Phase 2 ではこのファイルだけ直せば Spring Boot に切り替わる。
+          </p>
+          <div class="code-block">
+            <div class="code-header">
+              <div class="code-dots"><div class="code-dot r"></div><div class="code-dot y"></div><div class="code-dot g"></div></div>
+              <span class="code-filename">frontend/lib/api/subjects.ts</span><span class="code-lang">ts</span>
+            </div>
+<pre><code><span class="kw">import type</span> { <span class="ty">Subject</span> } <span class="kw">from</span> <span class="st">'@/types/subject'</span>
+
+<span class="cm">// Phase 1: 同一オリジンの Next.js Route Handler（モック）を叩く。</span>
+<span class="cm">// Phase 2: `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/subjects` に変え、JWT を付ける。</span>
+<span class="kw">const</span> BASE = <span class="st">'/api/subjects'</span>
+
+<span class="cm">// 科目一覧を取得する。signal を渡すと useEffect のクリーンアップ時にリクエストをキャンセルできる。</span>
+<span class="kw">export async function</span> <span class="fn">fetchSubjects</span>(signal?: <span class="ty">AbortSignal</span>): <span class="ty">Promise</span>&lt;<span class="ty">Subject</span>[]&gt; {
+  <span class="cm">// ブラウザの HTTP キャッシュを使わず毎回サーバーから取得する</span>
+  <span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(BASE, { cache: <span class="st">'no-store'</span>, signal })
+  <span class="kw">if</span> (!res.ok) {
+    <span class="kw">throw new</span> <span class="ty">Error</span>(<span class="st">`科目一覧の取得に失敗しました (</span>${res.status}<span class="st">)`</span>)
+  }
+  <span class="kw">return</span> res.<span class="fn">json</span>() <span class="kw">as</span> <span class="ty">Promise</span>&lt;<span class="ty">Subject</span>[]&gt;
+}
+
+<span class="cm">// 科目を1件削除する</span>
+<span class="kw">export async function</span> <span class="fn">deleteSubject</span>(id: <span class="ty">string</span>): <span class="ty">Promise</span>&lt;<span class="ty">void</span>&gt; {
+  <span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="st">`</span>${BASE}<span class="st">/</span>${id}<span class="st">`</span>, { method: <span class="st">'DELETE'</span> })
+  <span class="kw">if</span> (!res.ok) {
+    <span class="kw">throw new</span> <span class="ty">Error</span>(<span class="st">`科目の削除に失敗しました (</span>${res.status}<span class="st">)`</span>)
+  }
+}</code></pre>
+          </div>
+          <div class="callout info">
+            <span class="callout-icon">🧪</span>
+            <div class="callout-body">
+              <code>res.ok</code> は HTTP ステータスが 200〜299 のとき <code>true</code>。
+              それ以外（404・500 など）は <code>Error</code> を <code>throw</code> し、呼び出し側（画面）の <code>catch</code> でエラートーストにつなげる。
+              エラーメッセージはそのままトースト文言になる。
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 6 -->
+      <div class="step" id="step6">
+        <div class="step-left"><div class="step-circle">6</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-title">確認ダイアログ — <code>ConfirmDialog.tsx</code></div>
+          <p>削除専用ではなく、汎用の確認ダイアログにしておく（学習ログ削除でも再利用できる）。</p>
+          <div class="code-block">
+            <div class="code-header">
+              <div class="code-dots"><div class="code-dot r"></div><div class="code-dot y"></div><div class="code-dot g"></div></div>
+              <span class="code-filename">frontend/app/(protected)/subjects/_components/ConfirmDialog.tsx</span><span class="code-lang">tsx</span>
+            </div>
+<pre><code><span class="st">'use client'</span>
+
+<span class="kw">import</span> { useEffect, useId } <span class="kw">from</span> <span class="st">'react'</span>
+
+<span class="kw">type</span> <span class="ty">ConfirmDialogProps</span> = {
+  open:          <span class="ty">boolean</span>
+  title:         <span class="ty">string</span>
+  message:       <span class="ty">string</span>
+  confirmLabel?: <span class="ty">string</span>
+  cancelLabel?:  <span class="ty">string</span>
+  loading?:      <span class="ty">boolean</span>
+  onConfirm:     () => <span class="ty">void</span>
+  onCancel:      () => <span class="ty">void</span>
+}
+
+<span class="kw">export default function</span> <span class="fn">ConfirmDialog</span>({
+  open,
+  title,
+  message,
+  confirmLabel = <span class="st">'OK'</span>,
+  cancelLabel  = <span class="st">'キャンセル'</span>,
+  loading      = <span class="kw">false</span>,
+  onConfirm,
+  onCancel,
+}: <span class="ty">ConfirmDialogProps</span>) {
+  <span class="cm">// useId() で生成したプレフィックスから ARIA 用 ID を派生させる</span>
+  <span class="kw">const</span> id      = <span class="fn">useId</span>()
+  <span class="kw">const</span> titleId = <span class="st">`</span>${id}<span class="st">-title`</span>
+  <span class="kw">const</span> descId  = <span class="st">`</span>${id}<span class="st">-desc`</span>
+
+  <span class="cm">// ESC キーで閉じる（削除実行中は無効）</span>
+  useEffect(() => {
+    <span class="kw">if</span> (!open) <span class="kw">return</span>
+    <span class="kw">const</span> onKey = (e: <span class="ty">KeyboardEvent</span>) => {
+      <span class="kw">if</span> (e.key === <span class="st">'Escape'</span> &amp;&amp; !loading) <span class="fn">onCancel</span>()
+    }
+    document.<span class="fn">addEventListener</span>(<span class="st">'keydown'</span>, onKey)
+    <span class="kw">return</span> () => document.<span class="fn">removeEventListener</span>(<span class="st">'keydown'</span>, onKey)
+  }, [open, loading, onCancel])
+
+  <span class="kw">if</span> (!open) <span class="kw">return null</span>
+
+  <span class="kw">return</span> (
+    <span class="cm">// バックドロップ。クリックで閉じる（実行中は無効）</span>
+    &lt;<span class="ty">div</span>
+      className=<span class="st">"fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"</span>
+      onClick={() => { <span class="kw">if</span> (!loading) <span class="fn">onCancel</span>() }}
+    &gt;
+      &lt;<span class="ty">div</span>
+        role=<span class="st">"dialog"</span>
+        aria-modal=<span class="st">"true"</span>
+        aria-labelledby={titleId}
+        aria-describedby={descId}
+        onClick={(e) => e.<span class="fn">stopPropagation</span>()}
+        className=<span class="st">"w-full max-w-sm rounded-lg bg-white p-6 shadow-xl"</span>
+      &gt;
+        &lt;<span class="ty">h2</span> id={titleId} className=<span class="st">"text-lg font-bold text-gray-900"</span>&gt;
+          {title}
+        &lt;/<span class="ty">h2</span>&gt;
+        &lt;<span class="ty">p</span> id={descId} className=<span class="st">"mt-2 text-sm text-gray-600"</span>&gt;
+          {message}
+        &lt;/<span class="ty">p</span>&gt;
+        &lt;<span class="ty">div</span> className=<span class="st">"mt-6 flex justify-end gap-2"</span>&gt;
+          &lt;<span class="ty">button</span>
+            type=<span class="st">"button"</span>
+            onClick={onCancel}
+            disabled={loading}
+            className=<span class="st">"rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700
+              hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"</span>
+          &gt;
+            {cancelLabel}
+          &lt;/<span class="ty">button</span>&gt;
+          &lt;<span class="ty">button</span>
+            type=<span class="st">"button"</span>
+            onClick={onConfirm}
+            disabled={loading}
+            className=<span class="st">"rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white
+              hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"</span>
+          &gt;
+            {loading ? <span class="st">'削除中...'</span> : confirmLabel}
+          &lt;/<span class="ty">button</span>&gt;
+        &lt;/<span class="ty">div</span>&gt;
+      &lt;/<span class="ty">div</span>&gt;
+    &lt;/<span class="ty">div</span>&gt;
+  )
+}</code></pre>
+          </div>
+
+          <div class="callout tip">
+            <span class="callout-icon">💡</span>
+            <div class="callout-body">
+              <span class="callout-title">耳寄り — <code>useId()</code> とは何か、なぜ使うのか</span>
+              <p style="margin-bottom:8px;">
+                <code>useId()</code> は React 18 で追加されたフックで、<strong>コンポーネントのインスタンスごとに一意な文字列 ID を生成する</strong>。
+                生成される値は <code>:r0:</code> <code>:r1:</code> のような形式で、同じコンポーネントが複数回マウントされても重複しない。
+              </p>
+
+              <h4 style="margin:12px 0 6px;">なぜ <code>id="confirm-title"</code> のような固定文字列を使ってはいけないのか</h4>
+              <p style="margin-bottom:8px;">
+                ARIA の <code>aria-labelledby</code> / <code>aria-describedby</code> は <strong>DOM 上の <code>id</code> で要素を特定する</strong>。
+                <code>id</code> はページ内で一意でなければならない。
+                固定文字列を使うと、同じコンポーネントが2つ以上存在したとき（例: 一覧画面で複数の削除ダイアログが隠れて存在する）に <code>id</code> が重複し、
+                スクリーンリーダーが誤った要素を読み上げる。
+              </p>
+
+              <div class="code-block" style="margin:8px 0;">
+                <pre style="padding:12px 16px;font-size:12px;line-height:1.8;"><code><span class="cm">// ❌ 固定 ID — 同じコンポーネントが複数あると id が重複する</span>
+&lt;<span class="ty">div</span> aria-labelledby=<span class="st">"confirm-title"</span>&gt;
+  &lt;<span class="ty">h2</span> id=<span class="st">"confirm-title"</span>&gt;...&lt;/<span class="ty">h2</span>&gt;
+
+<span class="cm">// ✅ useId() — インスタンスごとに異なる ID が生成される</span>
+<span class="kw">const</span> id      = <span class="fn">useId</span>()          <span class="cm">// 例: ":r3:"</span>
+<span class="kw">const</span> titleId = <span class="st">`</span>${id}<span class="st">-title`</span>     <span class="cm">// 例: ":r3:-title"</span>
+&lt;<span class="ty">div</span> aria-labelledby={titleId}&gt;
+  &lt;<span class="ty">h2</span> id={titleId}&gt;...&lt;/<span class="ty">h2</span>&gt;</code></pre>
+              </div>
+
+              <h4 style="margin:12px 0 6px;">なぜ <code>crypto.randomUUID()</code> や <code>Math.random()</code> ではないのか</h4>
+              <p style="margin-bottom:0;">
+                ランダム値はサーバー（SSR）とブラウザで生成のたびに異なる値になる。React はサーバーで生成した HTML とブラウザで再レンダリングした結果を照合する（ハイドレーション）が、
+                <code>id</code> が一致しないと <strong>ハイドレーションエラー</strong> が発生する。
+                <code>useId()</code> はコンポーネントツリーの構造から決定的に値を導くため、サーバーとブラウザで同じ値が生成され、ハイドレーションが壊れない。
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 7 -->
+      <div class="step" id="step7">
+        <div class="step-left"><div class="step-circle">7</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-title">一覧本体 — <code>SubjectList.tsx</code></div>
+          <p>取得・表示・削除の中心。Step 5 の API クライアントと Step 6 のダイアログ、#9 のトーストを組み合わせる。</p>
+          <div class="code-block">
+            <div class="code-header">
+              <div class="code-dots"><div class="code-dot r"></div><div class="code-dot y"></div><div class="code-dot g"></div></div>
+              <span class="code-filename">frontend/app/(protected)/subjects/_components/SubjectList.tsx</span><span class="code-lang">tsx</span>
+            </div>
+<pre><code><span class="st">'use client'</span>
+
+<span class="kw">import</span> <span class="ty">Link</span> <span class="kw">from</span> <span class="st">'next/link'</span>
+<span class="kw">import</span> { useEffect, useState } <span class="kw">from</span> <span class="st">'react'</span>
+
+<span class="kw">import</span> <span class="ty">ConfirmDialog</span> <span class="kw">from</span> <span class="st">'./ConfirmDialog'</span>
+<span class="kw">import</span> { useToast } <span class="kw">from</span> <span class="st">'../../_components/ToastContext'</span>
+<span class="kw">import</span> { fetchSubjects, deleteSubject } <span class="kw">from</span> <span class="st">'@/lib/api/subjects'</span>
+<span class="kw">import type</span> { <span class="ty">Subject</span> } <span class="kw">from</span> <span class="st">'@/types/subject'</span>
+
+<span class="cm">// ISO 文字列を「2026/01/10」形式に整形する</span>
+<span class="kw">function</span> <span class="fn">formatDate</span>(iso: <span class="ty">string</span>): <span class="ty">string</span> {
+  <span class="kw">return new</span> <span class="ty">Date</span>(iso).<span class="fn">toLocaleDateString</span>(<span class="st">'ja-JP'</span>, {
+    year: <span class="st">'numeric'</span>, month: <span class="st">'2-digit'</span>, day: <span class="st">'2-digit'</span>,
+  })
+}
+
+<span class="kw">export default function</span> <span class="fn">SubjectList</span>() {
+  <span class="kw">const</span> { addToast } = <span class="fn">useToast</span>()
+
+  <span class="kw">const</span> [subjects, setSubjects] = useState&lt;<span class="ty">Subject</span>[]&gt;([])
+  <span class="kw">const</span> [loading, setLoading]   = useState(<span class="kw">true</span>)
+  <span class="kw">const</span> [error, setError]       = useState&lt;<span class="ty">string</span> | <span class="kw">null</span>&gt;(<span class="kw">null</span>)
+
+  <span class="cm">// 削除確認の対象（null = ダイアログ閉）と、削除実行中フラグ</span>
+  <span class="kw">const</span> [pendingDelete, setPendingDelete] = useState&lt;<span class="ty">Subject</span> | <span class="kw">null</span>&gt;(<span class="kw">null</span>)
+  <span class="kw">const</span> [deleting, setDeleting]           = useState(<span class="kw">false</span>)
+
+  <span class="cm">// 初回マウント時に一覧を取得する</span>
+  useEffect(() => {
+    <span class="kw">const</span> controller = <span class="kw">new</span> <span class="ty">AbortController</span>()
+    <span class="fn">fetchSubjects</span>(controller.signal)
+      .<span class="fn">then</span>((data) => { <span class="fn">setSubjects</span>(data); <span class="fn">setError</span>(<span class="kw">null</span>) })
+      .<span class="fn">catch</span>((e) => {
+        <span class="cm">// AbortError はアンマウントによるキャンセルなので無視する</span>
+        <span class="kw">if</span> (e <span class="kw">instanceof</span> <span class="ty">Error</span> &amp;&amp; e.name === <span class="st">'AbortError'</span>) <span class="kw">return</span>
+        <span class="fn">setError</span>(e <span class="kw">instanceof</span> <span class="ty">Error</span> ? e.message : <span class="st">'読み込みに失敗しました'</span>)
+      })
+      .<span class="fn">finally</span>(() => <span class="fn">setLoading</span>(<span class="kw">false</span>))
+    <span class="kw">return</span> () => controller.<span class="fn">abort</span>()
+  }, [])
+
+  <span class="cm">// ダイアログで「削除する」を押したとき</span>
+  <span class="kw">const</span> handleConfirmDelete = <span class="kw">async</span> () => {
+    <span class="kw">if</span> (!pendingDelete) <span class="kw">return</span>
+    <span class="fn">setDeleting</span>(<span class="kw">true</span>)
+    <span class="kw">try</span> {
+      <span class="kw">await</span> <span class="fn">deleteSubject</span>(pendingDelete.id)
+      <span class="fn">setSubjects</span>((prev) => prev.<span class="fn">filter</span>((s) => s.id !== pendingDelete.id))
+      <span class="fn">addToast</span>(<span class="st">'科目を削除しました'</span>, <span class="st">'success'</span>)
+    } <span class="kw">catch</span> (e) {
+      <span class="fn">addToast</span>(e <span class="kw">instanceof</span> <span class="ty">Error</span> ? e.message : <span class="st">'削除に失敗しました'</span>, <span class="st">'error'</span>)
+    } <span class="kw">finally</span> {
+      <span class="fn">setDeleting</span>(<span class="kw">false</span>)
+      <span class="fn">setPendingDelete</span>(<span class="kw">null</span>)  <span class="cm">// 成否にかかわらずダイアログを閉じる</span>
+    }
+  }
+
+  <span class="kw">if</span> (loading) <span class="kw">return</span> &lt;<span class="ty">p</span> className=<span class="st">"text-gray-500"</span>&gt;読み込み中...&lt;/<span class="ty">p</span>&gt;
+  <span class="kw">if</span> (error)   <span class="kw">return</span> &lt;<span class="ty">p</span> className=<span class="st">"text-red-600"</span>&gt;{error}&lt;/<span class="ty">p</span>&gt;
+  <span class="kw">if</span> (subjects.length === <span class="nu">0</span>) {
+    <span class="kw">return</span> &lt;<span class="ty">p</span> className=<span class="st">"text-gray-500"</span>&gt;科目が登録されていません。&lt;/<span class="ty">p</span>&gt;
+  }
+
+  <span class="kw">return</span> (
+    &lt;&gt;
+      &lt;<span class="ty">div</span> className=<span class="st">"overflow-x-auto rounded-lg border border-gray-200"</span>&gt;
+        &lt;<span class="ty">table</span> className=<span class="st">"w-full text-sm"</span>&gt;
+          &lt;<span class="ty">thead</span> className=<span class="st">"bg-gray-50 text-left text-gray-600"</span>&gt;
+            &lt;<span class="ty">tr</span>&gt;
+              &lt;<span class="ty">th</span> className=<span class="st">"px-4 py-3 font-semibold"</span>&gt;科目名&lt;/<span class="ty">th</span>&gt;
+              &lt;<span class="ty">th</span> className=<span class="st">"px-4 py-3 font-semibold"</span>&gt;登録日&lt;/<span class="ty">th</span>&gt;
+              &lt;<span class="ty">th</span> className=<span class="st">"px-4 py-3 font-semibold text-right"</span>&gt;操作&lt;/<span class="ty">th</span>&gt;
+            &lt;/<span class="ty">tr</span>&gt;
+          &lt;/<span class="ty">thead</span>&gt;
+          &lt;<span class="ty">tbody</span>&gt;
+            {subjects.<span class="fn">map</span>((subject) => (
+              &lt;<span class="ty">tr</span> key={subject.id} className=<span class="st">"border-t border-gray-100"</span>&gt;
+                &lt;<span class="ty">td</span> className=<span class="st">"px-4 py-3 text-gray-900"</span>&gt;{subject.name}&lt;/<span class="ty">td</span>&gt;
+                &lt;<span class="ty">td</span> className=<span class="st">"px-4 py-3 text-gray-600"</span>&gt;{<span class="fn">formatDate</span>(subject.createdAt)}&lt;/<span class="ty">td</span>&gt;
+                &lt;<span class="ty">td</span> className=<span class="st">"px-4 py-3"</span>&gt;
+                  &lt;<span class="ty">div</span> className=<span class="st">"flex justify-end gap-2"</span>&gt;
+                    &lt;<span class="ty">Link</span>
+                      href={<span class="st">`/subjects/</span>${subject.id}<span class="st">/edit`</span>}
+                      className=<span class="st">"rounded-md border border-gray-300 px-3 py-1 text-gray-700
+                        hover:bg-gray-100 transition-colors"</span>
+                    &gt;
+                      編集
+                    &lt;/<span class="ty">Link</span>&gt;
+                    &lt;<span class="ty">button</span>
+                      type=<span class="st">"button"</span>
+                      onClick={() => <span class="fn">setPendingDelete</span>(subject)}
+                      className=<span class="st">"rounded-md border border-red-300 px-3 py-1 text-red-600
+                        hover:bg-red-50 transition-colors cursor-pointer"</span>
+                    &gt;
+                      削除
+                    &lt;/<span class="ty">button</span>&gt;
+                  &lt;/<span class="ty">div</span>&gt;
+                &lt;/<span class="ty">td</span>&gt;
+              &lt;/<span class="ty">tr</span>&gt;
+            ))}
+          &lt;/<span class="ty">tbody</span>&gt;
+        &lt;/<span class="ty">table</span>&gt;
+      &lt;/<span class="ty">div</span>&gt;
+
+      &lt;<span class="ty">ConfirmDialog</span>
+        open={pendingDelete !== <span class="kw">null</span>}
+        title=<span class="st">"科目を削除しますか？"</span>
+        message=<span class="st">"科目を削除すると、関連する学習ログもすべて削除されます。よろしいですか？"</span>
+        confirmLabel=<span class="st">"削除する"</span>
+        cancelLabel=<span class="st">"キャンセル"</span>
+        loading={deleting}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => <span class="fn">setPendingDelete</span>(<span class="kw">null</span>)}
+      /&gt;
+    &lt;/&gt;
+  )
+}</code></pre>
+          </div>
+          <div class="callout info">
+            <span class="callout-icon">📖</span>
+            <div class="callout-body">
+              <span class="callout-title">ISO 文字列とは何か — そして言語の壁を越えられる理由</span>
+              <strong>ISO 文字列</strong>とは、ISO 8601（国際標準化機構が定めた日時表記の規格）に従った文字列のこと。
+              <code>"2026-01-10T00:00:00Z"</code> という形式で、年月日・時分秒・タイムゾーン情報をひとつの文字列に収めている。
+              <div class="table-wrap" style="margin:10px 0;">
+                <table style="font-size:13px;">
+                  <thead><tr><th>部分</th><th>例</th><th>意味</th></tr></thead>
+                  <tbody>
+                    <tr><td><code>2026-01-10</code></td><td>年月日</td><td>ハイフン区切り</td></tr>
+                    <tr><td><code>T</code></td><td>区切り文字</td><td>日付と時刻の境界を示す</td></tr>
+                    <tr><td><code>00:00:00</code></td><td>時分秒</td><td>コロン区切り</td></tr>
+                    <tr><td><code>Z</code></td><td>タイムゾーン</td><td>UTC（協定世界時）を意味する。<code>+09:00</code> のようにオフセットで書くこともできる</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <strong>Phase 1 では mockStore.ts から、本番では Spring Boot から</strong><br>
+              <code>formatDate()</code> が受け取る <code>createdAt</code> の出どころは、フェーズによって異なる。
+              <div class="table-wrap" style="margin:8px 0;">
+                <table style="font-size:13px;">
+                  <thead><tr><th>フェーズ</th><th>出どころ</th><th>値の例</th></tr></thead>
+                  <tbody>
+                    <tr>
+                      <td>Phase 1（現在）</td>
+                      <td><code>lib/subjects/mockStore.ts</code> の配列に直書きした文字列</td>
+                      <td><code>"2026-01-10T00:00:00Z"</code></td>
+                    </tr>
+                    <tr>
+                      <td>Phase 2（本番）</td>
+                      <td>Spring Boot が PostgreSQL の <code>TIMESTAMP</code> 型を JSON シリアライズした文字列</td>
+                      <td><code>"2026-01-10T00:00:00Z"</code>（同じ形式）</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              Spring Boot は <code>TIMESTAMP</code> カラムの値を JSON に変換するとき、自動で ISO 8601 形式の文字列にする。
+              そのため <code>formatDate()</code> 側は Phase 1 と Phase 2 で何も変える必要がない。<br><br>
+              <strong>ISO 8601 が言語の壁を越えられる理由</strong><br>
+              Java（Spring Boot）も JavaScript（ブラウザ）も、ISO 8601 を解釈する仕組みを標準で持っている。
+              <ul class="prose" style="margin:8px 0 0;">
+                <li>Java: <code>LocalDateTime</code> / Jackson は ISO 8601 を標準でシリアライズ・デシリアライズできる</li>
+                <li>JavaScript: <code>new Date("2026-01-10T00:00:00Z")</code> でそのまま <code>Date</code> オブジェクトになる</li>
+              </ul>
+              「どう書くか」を ISO 8601 という共通の規格で統一しているから、異なる言語・システム間でも追加の変換処理なしにデータをやりとりできる。Web API の日時フィールドに ISO 文字列が慣習的に使われているのはこのためだ。
+            </div>
+          </div>
+          <div class="callout tip">
+            <span class="callout-icon">💡</span>
+            <div class="callout-body">
+              <span class="callout-title">耳寄り — <code>toLocaleDateString()</code> とは何か</span>
+              <code>Date</code> オブジェクトのメソッドで、<strong>ロケール（地域・言語）に応じた日付文字列</strong>を返す。
+              第1引数にロケールコード、第2引数にオプションオブジェクトを渡す。
+              <div class="table-wrap" style="margin:10px 0;">
+                <table style="font-size:13px;">
+                  <thead><tr><th>引数</th><th>値</th><th>意味</th></tr></thead>
+                  <tbody>
+                    <tr>
+                      <td>第1引数（ロケール）</td>
+                      <td><code>'ja-JP'</code></td>
+                      <td>日本語（日本）形式で整形する</td>
+                    </tr>
+                    <tr>
+                      <td><code>year</code></td>
+                      <td><code>'numeric'</code></td>
+                      <td>年を数値で表示（例: <code>2026</code>）</td>
+                    </tr>
+                    <tr>
+                      <td><code>month</code></td>
+                      <td><code>'2-digit'</code></td>
+                      <td>月を2桁ゼロ埋めで表示（例: <code>01</code>）</td>
+                    </tr>
+                    <tr>
+                      <td><code>day</code></td>
+                      <td><code>'2-digit'</code></td>
+                      <td>日を2桁ゼロ埋めで表示（例: <code>10</code>）</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              ロケールを変えると同じ <code>Date</code> オブジェクトから異なる文字列が得られる。
+              <div class="code-block" style="margin:8px 0 0;">
+                <pre style="padding:12px 16px;font-size:12px;line-height:1.8;"><code><span class="kw">const</span> d = <span class="kw">new</span> <span class="ty">Date</span>(<span class="st">'2026-01-10T00:00:00Z'</span>)
+
+d.<span class="fn">toLocaleDateString</span>(<span class="st">'ja-JP'</span>, { year: <span class="st">'numeric'</span>, month: <span class="st">'2-digit'</span>, day: <span class="st">'2-digit'</span> })
+<span class="cm">// → "2026/01/10"</span>
+
+d.<span class="fn">toLocaleDateString</span>(<span class="st">'en-US'</span>, { year: <span class="st">'numeric'</span>, month: <span class="st">'2-digit'</span>, day: <span class="st">'2-digit'</span> })
+<span class="cm">// → "01/10/2026"</span>
+
+d.<span class="fn">toLocaleDateString</span>(<span class="st">'de-DE'</span>, { year: <span class="st">'numeric'</span>, month: <span class="st">'2-digit'</span>, day: <span class="st">'2-digit'</span> })
+<span class="cm">// → "10.01.2026"</span></code></pre>
+              </div>
+              ISO 文字列を直接表示すると <code>"2026-01-10T00:00:00Z"</code> のまま見えてしまうが、
+              <code>toLocaleDateString()</code> を通すことで人間が読みやすい形式に変換できる。
+              これが <code>formatDate()</code> の役割。
+            </div>
+          </div>
+          <div class="callout tip">
+            <span class="callout-icon">💡</span>
+            <div class="callout-body">
+              <span class="callout-title">アンマウント対策：<code>active</code> フラグ vs <code>AbortController</code>（現在の実装）</span>
+              取得の途中で画面を離れる（アンマウントする）と、解決後の <code>setState</code> が警告になる。これを防ぐ方法は2つある。
+              <div class="table-wrap" style="margin:10px 0;">
+                <table style="font-size:13px;">
+                  <thead><tr><th>手法</th><th>仕組み</th><th>特徴</th></tr></thead>
+                  <tbody>
+                    <tr>
+                      <td><code>active</code> フラグ</td>
+                      <td>クリーンアップ関数で <code>active = false</code> にし、<code>if (active)</code> で <code>setState</code> をガード</td>
+                      <td>リクエスト自体は飛び続ける。<code>setState</code> を呼ばないだけ</td>
+                    </tr>
+                    <tr>
+                      <td><code>AbortController</code> + <code>signal</code>（現在の実装）</td>
+                      <td>クリーンアップ関数で <code>controller.abort()</code> を呼び、リクエスト自体を中止する</td>
+                      <td>ネットワーク通信ごとキャンセルできるため、<code>active</code> フラグより優れている</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              現在の実装は <code>AbortController</code> を採用している。<code>fetchSubjects</code> が <code>signal</code> を受け取れる設計になっているため、クリーンアップ関数で <code>controller.abort()</code> を呼ぶだけでリクエストがキャンセルされる。<br><br>
+              <code>abort()</code> が呼ばれると fetch は <code>AbortError</code> を throw するため、<code>catch</code> で <code>AbortError</code> を判定して無視している。
+              これを忘れると、正常なキャンセルなのにエラーメッセージが表示されてしまう。
+            </div>
+          </div>
+          <div class="callout tip">
+            <span class="callout-icon">💡</span>
+            <div class="callout-body">
+              <span class="callout-title">耳寄り — <code>AbortController</code> とは何か</span>
+              <code>AbortController</code> はブラウザ標準の Web API で、<strong>「中止命令を送る送信機」</strong>のようなオブジェクト。
+              <code>new Date()</code> や <code>new Promise()</code> と同じ感覚で使えるブラウザ／Node.js 標準のオブジェクトで、追加インストールは不要。<br><br>
+              2つのパーツで成り立っている。
+              <div class="table-wrap" style="margin:10px 0;">
+                <table style="font-size:13px;">
+                  <thead><tr><th>パーツ</th><th>役割</th></tr></thead>
+                  <tbody>
+                    <tr>
+                      <td><code>controller.signal</code></td>
+                      <td>中止信号の<strong>受信機</strong>。<code>fetch</code> に渡すと、<code>fetch</code> がこれを監視し続ける</td>
+                    </tr>
+                    <tr>
+                      <td><code>controller.abort()</code></td>
+                      <td>中止命令を<strong>発火</strong>するメソッド。<code>signal</code> を監視しているすべての処理に伝わる</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="code-block" style="margin:8px 0;">
+                <pre style="padding:12px 16px;font-size:12px;line-height:1.8;"><code><span class="kw">const</span> controller = <span class="kw">new</span> <span class="ty">AbortController</span>()
+
+<span class="cm">// signal を fetch に渡しておく（監視開始）</span>
+<span class="fn">fetch</span>(<span class="st">'/api/subjects'</span>, { signal: controller.signal })
+
+<span class="cm">// 必要になったら中止命令を送る</span>
+controller.<span class="fn">abort</span>()
+<span class="cm">// → fetch が AbortError を throw する</span></code></pre>
+              </div>
+              <strong><code>subjects.ts</code> にキャンセル処理を書かなくていい理由</strong><br>
+              <code>fetch</code> は <code>signal</code> オプションを受け取ったとき、<strong>ブラウザが内部で自動的に監視処理を持つ</strong>。
+              <code>controller.abort()</code> が呼ばれると <code>fetch</code> 自身が通信を中断して <code>AbortError</code> を throw する。
+              そのため <code>fetchSubjects(signal)</code> 側では「受け取った <code>signal</code> を <code>fetch</code> に渡す」だけでよく、キャンセルの実装は一切不要。
+              <div class="code-block" style="margin:8px 0 0;">
+                <pre style="padding:12px 16px;font-size:12px;line-height:1.8;"><code><span class="cm">// fetch が内部でやっていること（概念的なイメージ）</span>
+signal.<span class="fn">addEventListener</span>(<span class="st">'abort'</span>, () => {
+  <span class="cm">// 通信を中断して AbortError を throw する</span>
+})</code></pre>
+              </div>
+              この仕組みは <code>fetch</code> の仕様として標準で定められているので、ライブラリや追加実装は不要。
+            </div>
+          </div>
+          <div class="callout tip">
+            <span class="callout-icon">💡</span>
+            <div class="callout-body">
+              <span class="callout-title">耳寄り — なぜ <code>catch (e: Error)</code> と書けないのか</span>
+              コード中に <code>e instanceof Error ? e.message : '読み込みに失敗しました'</code> という書き方が登場する。
+              「最初から <code>catch (e: Error)</code> と型指定すればよいのでは？」と思うかもしれないが、TypeScript はこれを<strong>コンパイルエラーにする</strong>。
+              <div class="code-block" style="margin:10px 0;">
+                <pre style="padding:12px 16px;font-size:12px;line-height:1.8;"><code><span class="cm">// ❌ コンパイルエラー — catch の引数に Error 型は指定できない</span>
+} <span class="kw">catch</span> (e: <span class="ty">Error</span>) {}
+
+<span class="cm">// ✅ unknown か any しか書けない（省略すると unknown 扱い）</span>
+} <span class="kw">catch</span> (e: <span class="ty">unknown</span>) {}
+} <span class="kw">catch</span> (e) {}</code></pre>
+              </div>
+              <strong>なぜこの制限があるのか</strong><br>
+              JavaScript では <code>throw</code> に何でも渡すことができる。
+              <div class="code-block" style="margin:8px 0;">
+                <pre style="padding:12px 16px;font-size:12px;line-height:1.8;"><code><span class="kw">throw new</span> <span class="ty">Error</span>(<span class="st">'メッセージ'</span>)  <span class="cm">// Error オブジェクト</span>
+<span class="kw">throw</span> <span class="st">'エラー文字列'</span>            <span class="cm">// 文字列</span>
+<span class="kw">throw</span> <span class="nu">404</span>                      <span class="cm">// 数値</span>
+<span class="kw">throw</span> { code: <span class="st">'FAIL'</span> }         <span class="cm">// オブジェクト</span></code></pre>
+              </div>
+              これは JavaScript の設計が「型に対して緩い」ことの表れで、<code>throw</code> の対象を <code>Error</code> に限定する強制がない。
+              TypeScript はその現実を正直に反映し、<code>catch</code> で捕まえる値の型を <code>unknown</code>（何が来るかわからない）として扱う。<br><br>
+              そのため <code>instanceof Error</code> で型を絞り込んでから <code>.message</code> を使う、という書き方が TypeScript の正攻法になっている。
+              実際には <code>fetchSubjects</code> 内で <code>throw new Error(...)</code> しているので <code>Error</code> 以外が来ることはほぼないが、
+              型システム上は「何でも来うる」ため、Error以外の何かが飛んできたときには汎用メッセージ <code>'読み込みに失敗しました'</code> で代替する。
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 8 -->
+      <div class="step" id="step8">
+        <div class="step-left"><div class="step-circle">8</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-title">ページ更新 — <code>subjects/page.tsx</code></div>
+          <p>
+            現在の「準備中」スタブを置き換える。見出しと「科目を追加」リンクは Server Component のまま、
+            一覧部分だけ Client Component（<code>SubjectList</code>）に任せる。
+          </p>
+          <div class="code-block">
+            <div class="code-header">
+              <div class="code-dots"><div class="code-dot r"></div><div class="code-dot y"></div><div class="code-dot g"></div></div>
+              <span class="code-filename">frontend/app/(protected)/subjects/page.tsx</span><span class="code-lang">tsx</span>
+            </div>
+<pre><code><span class="kw">import</span> <span class="ty">Link</span> <span class="kw">from</span> <span class="st">'next/link'</span>
+
+<span class="kw">import</span> <span class="ty">SubjectList</span> <span class="kw">from</span> <span class="st">'./_components/SubjectList'</span>
+
+<span class="kw">export default function</span> <span class="fn">SubjectsPage</span>() {
+  <span class="kw">return</span> (
+    &lt;<span class="ty">div</span> className=<span class="st">"space-y-6"</span>&gt;
+      &lt;<span class="ty">div</span> className=<span class="st">"flex items-center justify-between"</span>&gt;
+        &lt;<span class="ty">h1</span> className=<span class="st">"text-xl font-bold text-gray-900"</span>&gt;科目管理&lt;/<span class="ty">h1</span>&gt;
+        &lt;<span class="ty">Link</span>
+          href=<span class="st">"/subjects/new"</span>
+          className=<span class="st">"rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white
+            hover:bg-indigo-700 transition-colors"</span>
+        &gt;
+          科目を追加
+        &lt;/<span class="ty">Link</span>&gt;
+      &lt;/<span class="ty">div</span>&gt;
+
+      &lt;<span class="ty">SubjectList</span> /&gt;
+    &lt;/<span class="ty">div</span>&gt;
+  )
+}</code></pre>
+          </div>
+          <div class="callout info">
+            <span class="callout-icon">🧩</span>
+            <div class="callout-body">
+              Server Component（<code>page.tsx</code>）から Client Component（<code>SubjectList</code>）を「<strong>置くだけ</strong>」なら問題ない（#9 で学んだ境界の話と同じ）。
+              <code>page.tsx</code> に <code>'use client'</code> は不要。
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 9 -->
+      <div class="step" id="step9">
+        <div class="step-left"><div class="step-circle">9</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-title">遷移先スタブ — <code>new</code> / <code>[id]/edit</code></div>
+          <p>§2「スタブと認証」のとおり、リンク先のルートを存在させてハイドレーション不具合を防ぐ。中身は後続イシューで実装する。</p>
+          <div class="code-block">
+            <div class="code-header">
+              <div class="code-dots"><div class="code-dot r"></div><div class="code-dot y"></div><div class="code-dot g"></div></div>
+              <span class="code-filename">frontend/app/(protected)/subjects/new/page.tsx</span><span class="code-lang">tsx</span>
+            </div>
+<pre><code><span class="kw">export default function</span> <span class="fn">NewSubjectPage</span>() {
+  <span class="kw">return</span> &lt;<span class="ty">div</span>&gt;科目登録（準備中）&lt;/<span class="ty">div</span>&gt;
+}</code></pre>
+          </div>
+          <div class="code-block">
+            <div class="code-header">
+              <div class="code-dots"><div class="code-dot r"></div><div class="code-dot y"></div><div class="code-dot g"></div></div>
+              <span class="code-filename">frontend/app/(protected)/subjects/[id]/edit/page.tsx</span><span class="code-lang">tsx</span>
+            </div>
+<pre><code><span class="kw">export default function</span> <span class="fn">EditSubjectPage</span>() {
+  <span class="kw">return</span> &lt;<span class="ty">div</span>&gt;科目編集（準備中）&lt;/<span class="ty">div</span>&gt;
+}</code></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 10 -->
+      <div class="step" id="step10">
+        <div class="step-left"><div class="step-circle">10</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-title">単体テスト — <code>SubjectList.test.tsx</code></div>
+          <p>
+            API クライアント（<code>lib/api/subjects</code>）を <code>jest.mock</code> で差し替え、ネットワークなしで挙動を検証する。
+            テスト仕様書 §10.6（E2E-SUB-LIST-01/03/05/06）に対応する観点をカバーする。
+          </p>
+          <div class="code-block">
+            <div class="code-header">
+              <div class="code-dots"><div class="code-dot r"></div><div class="code-dot y"></div><div class="code-dot g"></div></div>
+              <span class="code-filename">frontend/app/(protected)/subjects/_components/SubjectList.test.tsx</span><span class="code-lang">tsx</span>
+            </div>
+<pre><code><span class="kw">import</span> { render, screen, waitFor, within } <span class="kw">from</span> <span class="st">'@testing-library/react'</span>
+<span class="kw">import</span> userEvent <span class="kw">from</span> <span class="st">'@testing-library/user-event'</span>
+
+<span class="kw">import</span> { <span class="ty">ToastProvider</span> } <span class="kw">from</span> <span class="st">'../../_components/ToastContext'</span>
+<span class="kw">import</span> <span class="ty">Toaster</span> <span class="kw">from</span> <span class="st">'../../_components/Toaster'</span>
+
+<span class="kw">import</span> <span class="ty">SubjectList</span> <span class="kw">from</span> <span class="st">'./SubjectList'</span>
+
+<span class="kw">import</span> { fetchSubjects, deleteSubject } <span class="kw">from</span> <span class="st">'@/lib/api/subjects'</span>
+
+<span class="cm">// API クライアントをモックに差し替える</span>
+jest.<span class="fn">mock</span>(<span class="st">'@/lib/api/subjects'</span>, () => ({
+  fetchSubjects: jest.<span class="fn">fn</span>(),
+  deleteSubject: jest.<span class="fn">fn</span>(),
+}))
+<span class="kw">const</span> mockFetchSubjects = fetchSubjects <span class="kw">as</span> jest.<span class="ty">Mock</span>
+<span class="kw">const</span> mockDeleteSubject = deleteSubject <span class="kw">as</span> jest.<span class="ty">Mock</span>
+
+<span class="kw">const</span> SAMPLE = [
+  { id: <span class="st">'id-1'</span>, name: <span class="st">'Spring Boot'</span>, createdAt: <span class="st">'2026-01-10T00:00:00Z'</span> },
+  { id: <span class="st">'id-2'</span>, name: <span class="st">'Next.js'</span>,     createdAt: <span class="st">'2026-02-15T00:00:00Z'</span> },
+]
+
+<span class="cm">// Provider + Toaster でラップしてレンダリングする</span>
+<span class="kw">function</span> <span class="fn">renderWithProviders</span>() {
+  <span class="kw">return</span> <span class="fn">render</span>(
+    &lt;<span class="ty">ToastProvider</span>&gt;
+      &lt;<span class="ty">SubjectList</span> /&gt;
+      &lt;<span class="ty">Toaster</span> /&gt;
+    &lt;/<span class="ty">ToastProvider</span>&gt;,
+  )
+}
+
+<span class="kw">async function</span> <span class="fn">clickDeleteButton</span>(user: <span class="ty">ReturnType</span>&lt;<span class="kw">typeof</span> userEvent.<span class="fn">setup</span>&gt;, subjectName: <span class="kw">string</span>) {
+  <span class="kw">const</span> row = (<span class="kw">await</span> screen.<span class="fn">findByText</span>(subjectName)).<span class="fn">closest</span>(<span class="st">'tr'</span>)!
+  <span class="kw">await</span> user.<span class="fn">click</span>(<span class="fn">within</span>(row).<span class="fn">getByRole</span>(<span class="st">'button'</span>, { name: <span class="st">'削除'</span> }))
+}
+
+<span class="kw">let</span> user: <span class="ty">ReturnType</span>&lt;<span class="kw">typeof</span> userEvent.<span class="fn">setup</span>&gt;
+beforeEach(() => {
+  jest.<span class="fn">clearAllMocks</span>()
+  user = userEvent.<span class="fn">setup</span>()
+})
+
+describe(<span class="st">'SubjectList'</span>, () => {
+  test(<span class="st">'取得した科目が一覧表示される'</span>, <span class="kw">async</span> () => {
+    mockFetchSubjects.<span class="fn">mockResolvedValue</span>(SAMPLE)
+    <span class="fn">renderWithProviders</span>()
+    expect(<span class="kw">await</span> screen.<span class="fn">findByText</span>(<span class="st">'Spring Boot'</span>)).<span class="fn">toBeInTheDocument</span>()
+    expect(screen.<span class="fn">getByText</span>(<span class="st">'Next.js'</span>)).<span class="fn">toBeInTheDocument</span>()
+  })
+
+  test(<span class="st">'削除ボタンで確認ダイアログが表示される'</span>, <span class="kw">async</span> () => {
+    mockFetchSubjects.<span class="fn">mockResolvedValue</span>(SAMPLE)
+    <span class="fn">renderWithProviders</span>()
+    <span class="kw">await</span> <span class="fn">clickDeleteButton</span>(user, <span class="st">'Spring Boot'</span>)
+
+    expect(screen.<span class="fn">getByRole</span>(<span class="st">'dialog'</span>)).<span class="fn">toBeInTheDocument</span>()
+    expect(
+      screen.<span class="fn">getByText</span>(<span class="st">'科目を削除すると、関連する学習ログもすべて削除されます。よろしいですか？'</span>),
+    ).<span class="fn">toBeInTheDocument</span>()
+  })
+
+  test(<span class="st">'キャンセルすると削除されない'</span>, <span class="kw">async</span> () => {
+    mockFetchSubjects.<span class="fn">mockResolvedValue</span>(SAMPLE)
+    <span class="fn">renderWithProviders</span>()
+
+    <span class="kw">await</span> <span class="fn">clickDeleteButton</span>(user, <span class="st">'Spring Boot'</span>)
+    <span class="kw">await</span> user.<span class="fn">click</span>(screen.<span class="fn">getByRole</span>(<span class="st">'button'</span>, { name: <span class="st">'キャンセル'</span> }))
+
+    expect(screen.<span class="fn">queryByRole</span>(<span class="st">'dialog'</span>)).<span class="fn">not</span>.<span class="fn">toBeInTheDocument</span>()
+    expect(mockDeleteSubject).<span class="fn">not</span>.<span class="fn">toHaveBeenCalled</span>()
+    expect(screen.<span class="fn">getByText</span>(<span class="st">'Spring Boot'</span>)).<span class="fn">toBeInTheDocument</span>()
+  })
+
+  test(<span class="st">'削除確定で行が消え、成功トーストが出る'</span>, <span class="kw">async</span> () => {
+    mockFetchSubjects.<span class="fn">mockResolvedValue</span>(SAMPLE)
+    mockDeleteSubject.<span class="fn">mockResolvedValue</span>(<span class="kw">undefined</span>)
+    <span class="fn">renderWithProviders</span>()
+
+    <span class="kw">await</span> <span class="fn">clickDeleteButton</span>(user, <span class="st">'Spring Boot'</span>)
+    <span class="kw">await</span> user.<span class="fn">click</span>(screen.<span class="fn">getByRole</span>(<span class="st">'button'</span>, { name: <span class="st">'削除する'</span> }))
+
+    <span class="kw">await</span> <span class="fn">waitFor</span>(() =>
+      expect(screen.<span class="fn">queryByText</span>(<span class="st">'Spring Boot'</span>)).<span class="fn">not</span>.<span class="fn">toBeInTheDocument</span>(),
+    )
+    expect(mockDeleteSubject).<span class="fn">toHaveBeenCalledWith</span>(<span class="st">'id-1'</span>)
+    expect(<span class="kw">await</span> screen.<span class="fn">findByText</span>(<span class="st">'科目を削除しました'</span>)).<span class="fn">toBeInTheDocument</span>()
+  })
+
+  test(<span class="st">'削除失敗でエラートーストが出て、行は残る'</span>, <span class="kw">async</span> () => {
+    mockFetchSubjects.<span class="fn">mockResolvedValue</span>(SAMPLE)
+    mockDeleteSubject.<span class="fn">mockRejectedValue</span>(<span class="kw">new</span> <span class="ty">Error</span>(<span class="st">'科目の削除に失敗しました（500）'</span>))
+    <span class="fn">renderWithProviders</span>()
+
+    <span class="kw">await</span> <span class="fn">clickDeleteButton</span>(user, <span class="st">'Spring Boot'</span>)
+    <span class="kw">await</span> user.<span class="fn">click</span>(screen.<span class="fn">getByRole</span>(<span class="st">'button'</span>, { name: <span class="st">'削除する'</span> }))
+
+    expect(<span class="kw">await</span> screen.<span class="fn">findByText</span>(<span class="st">'科目の削除に失敗しました（500）'</span>)).<span class="fn">toBeInTheDocument</span>()
+    expect(screen.<span class="fn">getByText</span>(<span class="st">'Spring Boot'</span>)).<span class="fn">toBeInTheDocument</span>()
+  })
+
+  test(<span class="st">'取得失敗時にエラーメッセージを表示する'</span>, <span class="kw">async</span> () => {
+    mockFetchSubjects.<span class="fn">mockRejectedValue</span>(<span class="kw">new</span> <span class="ty">Error</span>(<span class="st">'科目一覧の取得に失敗しました（500）'</span>))
+    <span class="fn">renderWithProviders</span>()
+    expect(
+      <span class="kw">await</span> screen.<span class="fn">findByText</span>(<span class="st">'科目一覧の取得に失敗しました（500）'</span>),
+    ).<span class="fn">toBeInTheDocument</span>()
+  })
+})</code></pre>
+          </div>
+          <div class="callout tip">
+            <span class="callout-icon">💡</span>
+            <div class="callout-body">
+              <span class="callout-title">テストのポイント</span>
+              <strong><code>userEvent.setup()</code> は <code>beforeEach</code> で生成し同一インスタンスを使い回す。</strong>各テストで再生成すると <code>clickDeleteButton</code> と各テストのイベントキューが分離してしまう。<br><br>
+              <strong>繰り返しパターンは <code>clickDeleteButton</code> ヘルパーに切り出す。</strong>削除ボタンを押す手順を関数化することで各テストが「何をテストするか」に集中できる。<code>user</code> を引数で受け取ることで同一イベントキューを共有する。<br><br>
+              <strong><code>findBy*</code> と <code>getBy*</code> の使い分け。</strong><code>findBy*</code> は「現れるまで待つ」非同期版。<code>useEffect</code> 後に表示される要素には <code>await findByText</code>、既に表示済みなら <code>getByText</code> を使う。
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ══════════════════════════════════════════
+       4. 動作確認
+  ══════════════════════════════════════════ -->
+  <div class="section" id="sec-verify">
+    <h2><span class="h2-num">4</span>動作確認手順</h2>
+    <p class="section-desc">画面・API・テストの3方向で確認する。</p>
+
+    <h3>4.1 開発サーバーで手動確認</h3>
+    <div class="code-block">
+      <div class="code-header">
+        <div class="code-dots"><div class="code-dot r"></div><div class="code-dot y"></div><div class="code-dot g"></div></div>
+        <span class="code-filename">terminal</span><span class="code-lang">bash</span>
+      </div>
+<pre><code><span class="cm"># frontend ディレクトリで</span>
+npm run dev
+<span class="cm"># → http://localhost:3000/subjects を開く（要ログイン）</span></code></pre>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>#</th><th>操作</th><th>期待結果</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td><code>/subjects</code> を開く</td><td>3 件（Spring Boot / Next.js / Zod）が科目名・登録日・操作付きで表示される</td></tr>
+          <tr><td>2</td><td>「科目を追加」をクリック</td><td><code>/subjects/new</code>（準備中）へ遷移する</td></tr>
+          <tr><td>3</td><td>いずれかの行の「編集」をクリック</td><td><code>/subjects/[id]/edit</code>（準備中）へ遷移する</td></tr>
+          <tr><td>4</td><td>「削除」をクリック</td><td>確認ダイアログが出て、指定の警告文が表示される</td></tr>
+          <tr><td>5</td><td>ダイアログで「キャンセル」/ ESC / 背景クリック</td><td>ダイアログが閉じ、一覧は変化しない</td></tr>
+          <tr><td>6</td><td>「削除する」をクリック</td><td>行が消え、「科目を削除しました」トーストが出る</td></tr>
+          <tr><td>7</td><td>削除後にページをリロード</td><td>削除が保持される（※サーバー再起動でリセット＝モックの仕様）</td></tr>
+          <tr><td>8</td><td>スマホ幅（375px）で表示</td><td>テーブルが横スクロールで操作できる（MOBILE-01）</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>4.2 Route Handler を直接叩く（任意）</h3>
+    <p>画面を介さず API 単体を確認したいとき。ログインが必要なため、ブラウザの DevTools コンソールから <code>fetch</code> するのが手軽。</p>
+    <div class="code-block">
+      <div class="code-header">
+        <div class="code-dots"><div class="code-dot r"></div><div class="code-dot y"></div><div class="code-dot g"></div></div>
+        <span class="code-filename">DevTools Console（ログイン状態のタブで）</span><span class="code-lang">js</span>
+      </div>
+<pre><code><span class="cm">// 一覧取得</span>
+<span class="kw">await</span> (<span class="kw">await</span> <span class="fn">fetch</span>(<span class="st">'/api/subjects'</span>)).<span class="fn">json</span>()
+
+<span class="cm">// 削除（id は上の結果から）→ 204 なら res.ok が true</span>
+<span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="st">'/api/subjects/880e8400-e29b-41d4-a716-446655440003'</span>, { method: <span class="st">'DELETE'</span> })
+res.status <span class="cm">// → 204（存在しない id なら 404）</span></code></pre>
+    </div>
+
+    <h3>4.3 自動テスト</h3>
+    <div class="code-block">
+      <div class="code-header">
+        <div class="code-dots"><div class="code-dot r"></div><div class="code-dot y"></div><div class="code-dot g"></div></div>
+        <span class="code-filename">terminal</span><span class="code-lang">bash</span>
+      </div>
+<pre><code><span class="cm"># このイシューのテストだけ</span>
+npm test -- SubjectList
+
+<span class="cm"># 既存テスト（Toaster / NavLinks など）の回帰確認</span>
+npm test</code></pre>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ══════════════════════════════════════════
+       5. API クイックリファレンス
+  ══════════════════════════════════════════ -->
+  <div class="section" id="sec-api">
+    <h2><span class="h2-num">5</span>API クイックリファレンス</h2>
+    <p class="section-desc">本イシューで公開するインターフェース。</p>
+
+    <div class="api-card">
+      <div class="api-card-header">
+        <div>
+          <div class="api-fn-name">fetchSubjects()</div>
+          <div class="api-fn-sig">→ Promise&lt;Subject[]&gt;</div>
+        </div>
+        <span class="badge client">Client</span>
+      </div>
+      <div class="api-card-body">
+        <p><code>GET /api/subjects</code> を呼び、科目配列を返す。失敗時は <code>Error</code> を throw する。</p>
+      </div>
+    </div>
+
+    <div class="api-card">
+      <div class="api-card-header">
+        <div>
+          <div class="api-fn-name">deleteSubject</div>
+          <div class="api-fn-sig">(id: string) → Promise&lt;void&gt;</div>
+        </div>
+        <span class="badge client">Client</span>
+      </div>
+      <div class="api-card-body">
+        <p><code>DELETE /api/subjects/{id}</code> を呼ぶ。2xx 以外は <code>Error</code> を throw する。</p>
+      </div>
+    </div>
+
+    <div class="api-card">
+      <div class="api-card-header">
+        <div>
+          <div class="api-fn-name">GET /api/subjects</div>
+          <div class="api-fn-sig">→ 200 Subject[]</div>
+        </div>
+        <span class="badge route">Route</span>
+      </div>
+      <div class="api-card-body">
+        <p>モックストアの一覧を JSON で返す。</p>
+      </div>
+    </div>
+
+    <div class="api-card">
+      <div class="api-card-header">
+        <div>
+          <div class="api-fn-name">DELETE /api/subjects/[id]</div>
+          <div class="api-fn-sig">→ 204 / 404</div>
+        </div>
+        <span class="badge route">Route</span>
+      </div>
+      <div class="api-card-body">
+        <p>該当 id を削除して <code>204</code>。存在しなければ <code>{ code, message }</code> と共に <code>404</code>。</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ══════════════════════════════════════════
+       6. チェックリスト
+  ══════════════════════════════════════════ -->
+  <div class="section" id="sec-checklist">
+    <h2><span class="h2-num">6</span>実装チェックリスト</h2>
+    <p class="section-desc">クリックでチェックを付けられる（ブラウザに保存される）。</p>
+
+    <ul class="checklist" id="checklist">
+      <li onclick="this.classList.toggle('done')"><div class="chk-box">✓</div><span class="chk-label"><code>types/subject.ts</code> を作成</span></li>
+      <li onclick="this.classList.toggle('done')"><div class="chk-box">✓</div><span class="chk-label"><code>lib/subjects/mockStore.ts</code> を作成</span></li>
+      <li onclick="this.classList.toggle('done')"><div class="chk-box">✓</div><span class="chk-label"><code>app/api/subjects/route.ts</code>（GET）を作成</span></li>
+      <li onclick="this.classList.toggle('done')"><div class="chk-box">✓</div><span class="chk-label"><code>app/api/subjects/[id]/route.ts</code>（DELETE）を作成</span></li>
+      <li onclick="this.classList.toggle('done')"><div class="chk-box">✓</div><span class="chk-label"><code>lib/api/subjects.ts</code> を作成</span></li>
+      <li onclick="this.classList.toggle('done')"><div class="chk-box">✓</div><span class="chk-label"><code>ConfirmDialog.tsx</code> を作成（role="dialog" / ESC / バックドロップ）</span></li>
+      <li onclick="this.classList.toggle('done')"><div class="chk-box">✓</div><span class="chk-label"><code>SubjectList.tsx</code> を作成（取得・表示・削除）</span></li>
+      <li onclick="this.classList.toggle('done')"><div class="chk-box">✓</div><span class="chk-label"><code>subjects/page.tsx</code> を更新（見出し＋追加ボタン＋一覧）</span></li>
+      <li onclick="this.classList.toggle('done')"><div class="chk-box">✓</div><span class="chk-label">遷移先スタブ <code>new</code> / <code>[id]/edit</code> を作成</span></li>
+      <li onclick="this.classList.toggle('done')"><div class="chk-box">✓</div><span class="chk-label">確認ダイアログのメッセージが要件どおり</span></li>
+      <li onclick="this.classList.toggle('done')"><div class="chk-box">✓</div><span class="chk-label">削除成功で行が消え、成功トーストが出る</span></li>
+      <li onclick="this.classList.toggle('done')"><div class="chk-box">✓</div><span class="chk-label">削除失敗でエラートーストが出て、行は残る</span></li>
+      <li onclick="this.classList.toggle('done')"><div class="chk-box">✓</div><span class="chk-label"><code>SubjectList.test.tsx</code> 全テストがグリーン</span></li>
+      <li onclick="this.classList.toggle('done')"><div class="chk-box">✓</div><span class="chk-label">既存テスト（Toaster / NavLinks 等）がリグレッションなくグリーン</span></li>
+    </ul>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ══════════════════════════════════════════
+       7. Phase 2 連携メモ
+  ══════════════════════════════════════════ -->
+  <div class="section" id="sec-phase2">
+    <h2><span class="h2-num">7</span>Phase 2 連携メモ — モックから Spring Boot へ</h2>
+    <p class="section-desc">
+      Phase 2 で Spring Boot の REST API ができたら、<strong>原則 <code>lib/api/subjects.ts</code> だけ</strong>を直せば移行できる。
+      画面（<code>SubjectList</code>）・ダイアログ・テストは無変更で済む設計にしてある。
+    </p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <div class="code-dots"><div class="code-dot r"></div><div class="code-dot y"></div><div class="code-dot g"></div></div>
+        <span class="code-filename">Phase 2 での lib/api/subjects.ts（イメージ）</span><span class="code-lang">ts</span>
+      </div>
+<pre><code><span class="cm">// 接続先を Spring Boot に変更し、JWT を Authorization に付ける</span>
+<span class="kw">const</span> BASE = <span class="st">`</span>${process.env.NEXT_PUBLIC_API_BASE_URL}<span class="st">/api/subjects`</span>
+
+<span class="kw">export async function</span> <span class="fn">fetchSubjects</span>(token: <span class="ty">string</span>): <span class="ty">Promise</span>&lt;<span class="ty">Subject</span>[]&gt; {
+  <span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(BASE, {
+    cache: <span class="st">'no-store'</span>,
+    headers: { <span class="ty">Authorization</span>: <span class="st">`Bearer </span>${token}<span class="st">`</span> },  <span class="cm">// API 仕様 §2</span>
+  })
+  <span class="kw">if</span> (!res.ok) <span class="kw">throw new</span> <span class="ty">Error</span>(<span class="st">`科目一覧の取得に失敗しました (</span>${res.status}<span class="st">)`</span>)
+  <span class="kw">return</span> res.<span class="fn">json</span>()
+}</code></pre>
+    </div>
+
+    <div class="callout warn">
+      <span class="callout-icon">🔑</span>
+      <div class="callout-body">
+        <span class="callout-title">Phase 2 で検討すること</span>
+        <ul class="prose" style="margin:6px 0 0;">
+          <li><strong>JWT の取得方法</strong>：Auth.js のセッションから raw トークンをどう取り出してブラウザの <code>fetch</code> に渡すか（クライアントに渡す方式の是非を含めて要検討）。</li>
+          <li><strong>不要になるファイル</strong>：<code>lib/subjects/mockStore.ts</code> とモックの Route Handler は削除（または Spring Boot 未起動時のフォールバックとして残す判断もあり）。</li>
+          <li><strong>CORS</strong>：別オリジン（:8080）になるため、Spring Boot 側で CORS 設定が必要。</li>
+          <li><strong>取得の高度化</strong>：自動再取得やキャッシュが欲しくなったら <code>SWR</code> / <code>React Query</code> の導入を検討（公式も推奨）。</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="callout ok">
+      <span class="callout-icon">✅</span>
+      <div class="callout-body">
+        <span class="callout-title">この設計の効きどころ</span>
+        画面と API クライアントを <strong>関数のインターフェースで分離</strong>したので、データの実体（モック→DB）が変わっても画面のコードとテストは守られる。
+        以降の学習ログ一覧（#11 以降）も <code>lib/api/studyLogs.ts</code> を同じ形で作れば、同じ恩恵を受けられる。
+      </div>
+    </div>
+  </div>
+
+  <!-- ── FOOTER ── -->
+  <div id="footer">
+    <span>関連: 要件定義書 §3.3</span>
+    <span>画面定義書 §5.5</span>
+    <span>API 仕様書 §4.2</span>
+    <span>テスト仕様書 §10.6</span>
+    <span>Issue #8 手順書 <code>doc/impl/issue-8-header.md</code>（スタブ・ハイドレーション）</span>
+    <span>更新日: 2026-05-25</span>
+  </div>
+
+</main>
+
+<script>
+  /* ─── Scroll progress ─── */
+  const fill = document.getElementById('progress-fill');
+  const pct  = document.getElementById('progress-pct');
+  window.addEventListener('scroll', () => {
+    const h = document.documentElement;
+    const p = Math.round(h.scrollTop / (h.scrollHeight - h.clientHeight) * 100);
+    fill.style.width = p + '%';
+    pct.textContent  = p + '%';
+  });
+
+  /* ─── Active TOC link ─── */
+  const sections = document.querySelectorAll('[id]');
+  const links    = document.querySelectorAll('.toc-link');
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        links.forEach(l => l.classList.remove('active'));
+        const a = document.querySelector(`.toc-link[href="#${e.target.id}"]`);
+        if (a) a.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+  sections.forEach(s => obs.observe(s));
+
+  /* ─── Checklist persist ─── */
+  const items = document.querySelectorAll('#checklist li');
+  const saved = JSON.parse(localStorage.getItem('issue10-checklist') || '[]');
+  items.forEach((li, i) => {
+    if (saved[i]) li.classList.add('done');
+    li.addEventListener('click', () => {
+      const state = [...items].map(l => l.classList.contains('done'));
+      localStorage.setItem('issue10-checklist', JSON.stringify(state));
+    });
+  });
+</script>
+</body>
+</html>
