@@ -4,6 +4,14 @@ import type { Subject } from '@/types/subject'
 // Phase 2: `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/subjects` に変え、JWT を付ける。
 const BASE = '/api/subjects'
 
+// HTTP エラーをステータスコード付きで表現するカスタムエラークラス
+export class ApiError extends Error {
+  constructor(readonly status: number, message: string) {
+    super(message)
+    this.name = 'ApiError'
+  }
+}
+
 // 科目一覧を取得する
 export async function fetchSubjects(signal?: AbortSignal): Promise<Subject[]> {
   // ブラウザの HTTP キャッシュを使わず毎回サーバーから取得する
@@ -13,6 +21,45 @@ export async function fetchSubjects(signal?: AbortSignal): Promise<Subject[]> {
   }
   return res.json() as Promise<Subject[]>
 }
+
+// 科目を1件取得する
+export async function fetchSubjectById(id: string): Promise<Subject> {
+  const res = await fetch(`${BASE}/${id}`, { cache: 'no-store' })
+  if (!res.ok) {
+    const body = await res.json().catch(() => {})
+    throw new ApiError(res.status, body.message ?? `科目の取得に失敗しました (${res.status})`)
+  }
+  return res.json() as Promise<Subject>
+}
+
+// 科目を新規登録する
+export async function createSubject(name: string): Promise<Subject> {
+  const res = await fetch(BASE, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => {})
+    throw new ApiError(res.status, body.message ?? `科目の登録に失敗しました (${res.status})`)
+  }
+  return res.json() as Promise<Subject>
+}
+
+// 科目名を更新する
+export async function updateSubject(id: string, name: string): Promise<Subject> {
+  const res = await fetch(`${BASE}/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name })
+  })
+  if(!res.ok) {
+    const body = await res.json().catch(() => {})
+    throw new ApiError(res.status, body.message ?? `科目の更新に失敗しました (${res.status})`)
+  }
+  return res.json() as Promise<Subject>
+}
+
 
 // 科目を1件削除する
 export async function deleteSubject(id: string, signal?: AbortSignal): Promise<void> {
