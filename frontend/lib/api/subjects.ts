@@ -23,8 +23,8 @@ export async function fetchSubjects(signal?: AbortSignal): Promise<Subject[]> {
 }
 
 // 科目を1件取得する
-export async function fetchSubjectById(id: string): Promise<Subject> {
-  const res = await fetch(`${BASE}/${id}`, { cache: 'no-store' })
+export async function fetchSubjectById(id: string, signal?: AbortSignal): Promise<Subject> {
+  const res = await fetch(`${BASE}/${id}`, { cache: 'no-store', signal })
   if (!res.ok) {
     const body = await res.json().catch(() => {})
     throw new ApiError(res.status, body.message ?? `科目の取得に失敗しました (${res.status})`)
