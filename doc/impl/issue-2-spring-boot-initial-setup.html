@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spring Boot プロジェクト初期セットアップ 実装手順</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-size: 16px;
+      line-height: 1.7;
+      color: #24292f;
+      background: #ffffff;
+      margin: 0;
+      padding: 0;
+    }
+
+    .page {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 48px 32px 80px;
+    }
+
+    /* ---- Header ---- */
+    .doc-header {
+      border-bottom: 2px solid #d0d7de;
+      padding-bottom: 24px;
+      margin-bottom: 40px;
+    }
+
+    .doc-header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      margin: 0 0 12px;
+      color: #0d1117;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      font-size: 14px;
+      color: #57606a;
+    }
+
+    .meta a {
+      color: #0969da;
+      text-decoration: none;
+    }
+
+    .meta a:hover { text-decoration: underline; }
+
+    /* ---- Steps ---- */
+    .step {
+      margin-bottom: 56px;
+    }
+
+    .step-heading {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+
+    .step-badge {
+      flex-shrink: 0;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #0969da;
+      color: #fff;
+      font-size: 15px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .step-heading h2 {
+      font-size: 20px;
+      font-weight: 700;
+      margin: 0;
+      color: #0d1117;
+    }
+
+    .step-body { padding-left: 50px; }
+
+    h3 {
+      font-size: 16px;
+      font-weight: 600;
+      margin: 20px 0 10px;
+      color: #0d1117;
+    }
+
+    p { margin: 0 0 12px; }
+
+    /* ---- Callout ---- */
+    .callout {
+      border-left: 4px solid #0969da;
+      background: #ddf4ff;
+      border-radius: 0 6px 6px 0;
+      padding: 12px 16px;
+      margin: 16px 0;
+      font-size: 14px;
+    }
+
+    .callout strong { color: #0550ae; }
+
+    .callout-warn {
+      border-left-color: #bf8700;
+      background: #fff8c5;
+    }
+
+    .callout-warn strong { color: #7d4e00; }
+
+    /* ---- Tables ---- */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14.5px;
+      margin: 12px 0 20px;
+    }
+
+    th, td {
+      border: 1px solid #d0d7de;
+      padding: 9px 14px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    thead th {
+      background: #f6f8fa;
+      font-weight: 600;
+      color: #0d1117;
+    }
+
+    tbody tr:nth-child(even) td { background: #f6f8fa; }
+
+    /* ---- Code blocks ---- */
+    pre {
+      background: #f6f8fa;
+      border: 1px solid #d0d7de;
+      border-radius: 6px;
+      padding: 16px 20px;
+      overflow-x: auto;
+      font-size: 13.5px;
+      line-height: 1.6;
+      margin: 12px 0;
+    }
+
+    code {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    }
+
+    pre code { background: none; padding: 0; }
+
+    p code, li code, td code {
+      background: #f0f2f5;
+      border: 1px solid #d0d7de;
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-size: 13.5px;
+    }
+
+    /* ---- Directory tree ---- */
+    .tree {
+      background: #f6f8fa;
+      border: 1px solid #d0d7de;
+      border-radius: 6px;
+      padding: 16px 20px;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 13.5px;
+      line-height: 1.8;
+      white-space: pre;
+      overflow-x: auto;
+    }
+
+    .tree .comment { color: #57606a; }
+
+    /* ---- Completion table ---- */
+    .checklist {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14.5px;
+      margin-top: 16px;
+    }
+
+    .checklist th,
+    .checklist td {
+      border: 1px solid #d0d7de;
+      padding: 10px 14px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .checklist thead th {
+      background: #f6f8fa;
+      font-weight: 600;
+      color: #0d1117;
+    }
+
+    .checklist tbody tr:nth-child(even) td { background: #f6f8fa; }
+
+    .checklist td:last-child {
+      white-space: nowrap;
+      color: #57606a;
+    }
+
+    /* ---- Divider ---- */
+    hr {
+      border: none;
+      border-top: 1px solid #d0d7de;
+      margin: 40px 0;
+    }
+
+    ul, ol { margin: 8px 0 12px; padding-left: 24px; }
+    li { margin-bottom: 4px; }
+
+    /* ---- Section heading ---- */
+    .section-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      color: #0d1117;
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ====== Document Header ====== -->
+  <header class="doc-header">
+    <h1>Spring Boot プロジェクト初期セットアップ 実装手順</h1>
+    <div class="meta">
+      <span>対応 Issue:
+        <a href="https://github.com/TYMtwilight/study-log/issues/2">
+          #2 [セットアップ] Spring Boot プロジェクト初期セットアップ
+        </a>
+      </span>
+      <span>作成日: 2026年4月28日</span>
+      <span>更新日: 2026年4月29日</span>
+    </div>
+  </header>
+
+  <!-- ====== Step 1 ====== -->
+  <section class="step">
+    <div class="step-heading">
+      <div class="step-badge">1</div>
+      <h2>Spring Initializr でプロジェクト生成</h2>
+    </div>
+    <div class="step-body">
+      <p>
+        <a href="https://start.spring.io/" target="_blank">https://start.spring.io/</a> で以下の設定でプロジェクトを生成する。
+      </p>
+
+      <table>
+        <thead>
+          <tr><th>項目</th><th>値</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Project</td><td>Gradle - Kotlin</td></tr>
+          <tr><td>Language</td><td>Java</td></tr>
+          <tr><td>Spring Boot</td><td>3.x（最新安定版）</td></tr>
+          <tr><td>Group</td><td>com.example</td></tr>
+          <tr><td>Artifact</td><td>study-log-api</td></tr>
+          <tr><td>Packaging</td><td>Jar</td></tr>
+          <tr><td>Java</td><td>21</td></tr>
+        </tbody>
+      </table>
+
+      <h3>追加する依存関係</h3>
+
+      <table>
+        <thead>
+          <tr><th>依存関係</th><th>用途</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Spring Reactive Web</td><td>WebFlux（REST API・SSE）</td></tr>
+          <tr><td>Spring Data R2DBC</td><td>ドメイン API の非同期 DB アクセス</td></tr>
+          <tr><td>PostgreSQL Driver（R2DBC）</td><td><code>org.postgresql:r2dbc-postgresql</code></td></tr>
+          <tr><td>Spring Batch</td><td>日次集計ジョブ（Issue #22）</td></tr>
+          <tr><td>JDBC API</td><td>Spring Batch のメタテーブル用（後述）</td></tr>
+          <tr><td>PostgreSQL Driver（JDBC）</td><td>Spring Batch のメタテーブル用（後述）</td></tr>
+          <tr><td>Spring Security</td><td>JWT 認証フィルター（Issue #16）</td></tr>
+          <tr><td>Spring Boot Actuator</td><td>ヘルスチェックエンドポイント</td></tr>
+          <tr><td>Validation</td><td>Bean Validation（<code>@Valid</code>）</td></tr>
+          <tr><td>Lombok</td><td>ボイラープレート削減（任意）</td></tr>
+          <tr><td>Flyway Core</td><td>DB マイグレーション管理（Issue #4）</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout callout-warn">
+        <strong>Spring Batch + WebFlux 共存の注意点</strong><br>
+        Spring Batch はメタテーブル（<code>BATCH_JOB_INSTANCE</code> 等）の操作に JDBC（ブロッキング）を使う。<br>
+        そのため、ドメイン API には R2DBC、Spring Batch には JDBC と<strong>2 種類の接続設定</strong>が必要になる。<br>
+        これは Spring 公式でも認められたパターン。（要件定義書 §6 「WebFlux と同一アプリに同居（習作のため）」）
+      </div>
+
+      <p>生成後、ディレクトリ名を <code>backend/</code> にリネームする。</p>
+      <pre><code>mv study-log-api backend</code></pre>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ====== Step 2 ====== -->
+  <section class="step">
+    <div class="step-heading">
+      <div class="step-badge">2</div>
+      <h2>プロジェクト構成の整備</h2>
+    </div>
+    <div class="step-body">
+      <div class="tree">backend/
+├── src/
+│   ├── main/
+│   │   ├── java/com/example/studylog/
+│   │   │   ├── StudyLogApiApplication.java
+│   │   │   ├── batch/               <span class="comment"># Spring Batch ジョブ（Issue #22）</span>
+│   │   │   │   ├── DailySummaryJob.java
+│   │   │   │   ├── DailySummaryReader.java
+│   │   │   │   ├── DailySummaryProcessor.java
+│   │   │   │   └── DailySummaryWriter.java
+│   │   │   ├── config/
+│   │   │   │   ├── SecurityConfig.java   <span class="comment"># JWT フィルター設定（Issue #16）</span>
+│   │   │   │   ├── WebFluxConfig.java    <span class="comment"># CORS 設定（Issue #15）</span>
+│   │   │   │   └── BatchConfig.java      <span class="comment"># Spring Batch 設定</span>
+│   │   │   ├── domain/
+│   │   │   │   ├── model/           <span class="comment"># エンティティ（R2DBC @Table）</span>
+│   │   │   │   │   ├── StudyLog.java
+│   │   │   │   │   ├── Subject.java
+│   │   │   │   │   ├── DailySummary.java
+│   │   │   │   │   └── User.java
+│   │   │   │   └── repository/      <span class="comment"># R2DBC リポジトリ</span>
+│   │   │   │       ├── StudyLogRepository.java
+│   │   │   │       ├── SubjectRepository.java
+│   │   │   │       └── DailySummaryRepository.java
+│   │   │   ├── service/             <span class="comment"># ビジネスロジック</span>
+│   │   │   │   ├── StudyLogService.java
+│   │   │   │   ├── SubjectService.java
+│   │   │   │   └── DashboardService.java
+│   │   │   ├── web/
+│   │   │   │   ├── controller/      <span class="comment"># @RestController（WebFlux）</span>
+│   │   │   │   │   ├── StudyLogController.java
+│   │   │   │   │   ├── SubjectController.java
+│   │   │   │   │   ├── DashboardController.java
+│   │   │   │   │   ├── BatchController.java
+│   │   │   │   │   └── SseController.java
+│   │   │   │   └── dto/             <span class="comment"># リクエスト / レスポンス DTO</span>
+│   │   │   └── exception/
+│   │   │       └── GlobalExceptionHandler.java  <span class="comment"># @ControllerAdvice</span>
+│   │   └── resources/
+│   │       ├── application.yml
+│   │       └── db/
+│   │           └── migration/       <span class="comment"># Flyway スクリプト（Issue #4）</span>
+│   └── test/
+│       └── java/com/example/studylog/
+├── build.gradle.kts
+├── settings.gradle.kts
+└── gradlew</div>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ====== Step 3 ====== -->
+  <section class="step">
+    <div class="step-heading">
+      <div class="step-badge">3</div>
+      <h2>application.yml の設定</h2>
+    </div>
+    <div class="step-body">
+      <pre><code>server:
+  port: 8080
+
+spring:
+  application:
+    name: study-log-api
+
+  # ドメイン API 用（WebFlux / R2DBC）
+  r2dbc:
+    url: r2dbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:studylog}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+
+  # Spring Batch 用（JDBC ブロッキング接続）
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:studylog}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+
+  batch:
+    job:
+      enabled: false # 起動時の自動実行を抑制（手動・スケジューラーで実行）
+    jdbc:
+      initialize-schema: never # Spring Batch メタテーブルは Flyway で管理
+
+  # Flyway（マイグレーション）
+  flyway:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:studylog}
+    user: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    locations: classpath:db/migration
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: when-authorized</code></pre>
+
+      <h3>ポイント</h3>
+      <ul>
+        <li><code>spring.batch.job.enabled=false</code> を必ず設定する。設定しないとアプリ起動のたびにバッチが実行される。</li>
+        <li>R2DBC と JDBC の接続先は同じ DB だが、URL スキームが異なる（<code>r2dbc:postgresql://</code> vs <code>jdbc:postgresql://</code>）。</li>
+      </ul>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ====== Step 4 ====== -->
+  <section class="step">
+    <div class="step-heading">
+      <div class="step-badge">4</div>
+      <h2>.env.example の作成</h2>
+    </div>
+    <div class="step-body">
+      <pre><code># PostgreSQL
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=studylog
+DB_USERNAME=postgres
+DB_PASSWORD=postgres
+
+# JWT（Auth.js v5 が発行する JWT の検証に使用）
+JWT_SECRET=your_jwt_secret_here</code></pre>
+      <p><code>.gitignore</code> に <code>.env</code> を追加し、<code>.env.example</code> のみをコミットする。</p>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ====== Step 5 ====== -->
+  <section class="step">
+    <div class="step-heading">
+      <div class="step-badge">5</div>
+      <h2>起動確認</h2>
+    </div>
+    <div class="step-body">
+      <p>Docker Compose で PostgreSQL を起動してから（Issue #3 完了後）実行する。</p>
+      <pre><code># PostgreSQL 起動
+docker compose up -d
+
+# Spring Boot 起動
+cd backend
+./gradlew bootRun</code></pre>
+
+      <p>ヘルスチェック確認:</p>
+      <pre><code>curl http://localhost:8080/actuator/health</code></pre>
+
+      <p>期待レスポンス:</p>
+      <pre><code>{
+  "status": "UP",
+  "components": {
+    "db": { "status": "UP" },
+    "r2dbc": { "status": "UP" }
+  }
+}</code></pre>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ====== Step 6 ====== -->
+  <section class="step">
+    <div class="step-heading">
+      <div class="step-badge">6</div>
+      <h2>build.gradle.kts の依存関係確認</h2>
+    </div>
+    <div class="step-body">
+      <p>Spring Initializr で生成した <code>build.gradle.kts</code> に以下が含まれていることを確認する。</p>
+      <pre><code>plugins {
+    java
+    id("org.springframework.boot") version "3.5.x"
+    id("io.spring.dependency-management") version "1.1.x"
+}
+
+group = "com.example"
+version = "0.0.1-SNAPSHOT"
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+configurations {
+    compileOnly {
+        extendsFrom(configurations.annotationProcessor.get())
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // WebFlux
+    implementation("org.springframework.boot:spring-boot-starter-webflux")
+
+    // R2DBC（ドメイン API 用）
+    implementation("org.springframework.boot:spring-boot-starter-data-r2dbc")
+    runtimeOnly("org.postgresql:r2dbc-postgresql")
+
+    // JDBC（Spring Batch 用）
+    implementation("org.springframework.boot:spring-boot-starter-jdbc")
+    runtimeOnly("org.postgresql:postgresql")
+
+    // Spring Batch
+    implementation("org.springframework.boot:spring-boot-starter-batch")
+
+    // Spring Security
+    implementation("org.springframework.boot:spring-boot-starter-security")
+
+    // Actuator
+    implementation("org.springframework.boot:spring-boot-starter-actuator")
+
+    // Validation
+    implementation("org.springframework.boot:spring-boot-starter-validation")
+
+    // Flyway
+    implementation("org.flywaydb:flyway-core")
+    implementation("org.flywaydb:flyway-database-postgresql")
+
+    // Lombok
+    compileOnly("org.projectlombok:lombok")
+    annotationProcessor("org.projectlombok:lombok")
+
+    // Test
+    testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("io.projectreactor:reactor-test")
+    testImplementation("org.springframework.batch:spring-batch-test")
+    testImplementation("org.springframework.security:spring-security-test")
+}
+
+tasks.withType&lt;Test&gt; {
+    useJUnitPlatform()
+}</code></pre>
+
+      <div class="callout">
+        <strong>バージョンについて</strong><br>
+        <code>3.5.x</code> / <code>1.1.x</code> の部分は Spring Initializr が生成した値をそのまま使用する。<br>
+        Gradle の依存関係バージョンは <code>io.spring.dependency-management</code> プラグインが Spring Boot BOM から自動管理するため、各依存関係のバージョンは原則として記述しない。
+      </div>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ====== Completion Checklist ====== -->
+  <section>
+    <h2 class="section-title">完了条件チェック</h2>
+    <table class="checklist">
+      <thead>
+        <tr>
+          <th>完了条件</th>
+          <th>対応ステップ</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Spring Initializr でプロジェクト作成（Gradle - Kotlin、WebFlux, R2DBC, Batch, Security, PostgreSQL）</td>
+          <td>Step 1</td>
+        </tr>
+        <tr>
+          <td><code>application.yml</code> に DB 接続設定・ポート設定を記述</td>
+          <td>Step 3</td>
+        </tr>
+        <tr>
+          <td><code>.env.example</code> を作成し必要な環境変数を列挙</td>
+          <td>Step 4</td>
+        </tr>
+        <tr>
+          <td><code>GET /actuator/health</code> が動作することを確認</td>
+          <td>Step 5</td>
+        </tr>
+        <tr>
+          <td><code>./gradlew bootRun</code> でローカル起動</td>
+          <td>Step 5</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+</div>
+</body>
+</html>
