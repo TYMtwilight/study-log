@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Google OAuth ログイン実装（Auth.js v5）実装手順</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-size: 16px;
+      line-height: 1.7;
+      color: #24292f;
+      background: #ffffff;
+      margin: 0;
+      padding: 0;
+    }
+
+    .page {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 48px 32px 80px;
+    }
+
+    /* ---- Header ---- */
+    .doc-header {
+      border-bottom: 2px solid #d0d7de;
+      padding-bottom: 24px;
+      margin-bottom: 40px;
+    }
+
+    .doc-header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      margin: 0 0 12px;
+      color: #0d1117;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      font-size: 14px;
+      color: #57606a;
+    }
+
+    .meta a { color: #0969da; text-decoration: none; }
+    .meta a:hover { text-decoration: underline; }
+
+    /* ---- Steps ---- */
+    .step { margin-bottom: 56px; }
+
+    .step-heading {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+
+    .step-badge {
+      flex-shrink: 0;
+      min-width: 36px;
+      height: 36px;
+      border-radius: 18px;
+      padding: 0 10px;
+      background: #0969da;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      white-space: nowrap;
+    }
+
+    .step-heading h2 {
+      font-size: 20px;
+      font-weight: 700;
+      margin: 0;
+      color: #0d1117;
+    }
+
+    .step-body { padding-left: 50px; }
+
+    h3 {
+      font-size: 16px;
+      font-weight: 600;
+      margin: 20px 0 10px;
+      color: #0d1117;
+    }
+
+    p { margin: 0 0 12px; }
+
+    /* ---- Callout ---- */
+    .callout {
+      border-left: 4px solid #0969da;
+      background: #ddf4ff;
+      border-radius: 0 6px 6px 0;
+      padding: 12px 16px;
+      margin: 16px 0;
+      font-size: 14px;
+    }
+
+    .callout strong { color: #0550ae; }
+
+    .callout pre {
+      margin: 10px 0 4px;
+      background: rgba(0,0,0,0.04);
+      border: none;
+    }
+
+    /* ---- Tables ---- */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14.5px;
+      margin: 12px 0 20px;
+    }
+
+    th, td {
+      border: 1px solid #d0d7de;
+      padding: 9px 14px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    thead th {
+      background: #f6f8fa;
+      font-weight: 600;
+      color: #0d1117;
+    }
+
+    tbody tr:nth-child(even) td { background: #f6f8fa; }
+
+    /* ---- Code blocks ---- */
+    pre {
+      background: #f6f8fa;
+      border: 1px solid #d0d7de;
+      border-radius: 6px;
+      padding: 16px 20px;
+      overflow-x: auto;
+      font-size: 13.5px;
+      line-height: 1.6;
+      margin: 12px 0;
+    }
+
+    code {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    }
+
+    pre code { background: none; padding: 0; }
+
+    p code, li code, td code {
+      background: #f0f2f5;
+      border: 1px solid #d0d7de;
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-size: 13.5px;
+    }
+
+    .callout code {
+      background: rgba(0,0,0,0.06);
+      border: none;
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+
+    /* ---- Inline comment coloring ---- */
+    .cmt { color: #57606a; font-style: italic; }
+
+    /* ---- Completion checklist ---- */
+    .checklist {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14.5px;
+      margin-top: 16px;
+    }
+
+    .checklist th,
+    .checklist td {
+      border: 1px solid #d0d7de;
+      padding: 10px 14px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .checklist thead th {
+      background: #f6f8fa;
+      font-weight: 600;
+      color: #0d1117;
+    }
+
+    .checklist tbody tr:nth-child(even) td { background: #f6f8fa; }
+
+    .checklist td:last-child {
+      white-space: nowrap;
+      color: #57606a;
+      font-size: 13.5px;
+    }
+
+    /* ---- Divider ---- */
+    hr {
+      border: none;
+      border-top: 1px solid #d0d7de;
+      margin: 40px 0;
+    }
+
+    ul, ol { margin: 8px 0 12px; padding-left: 24px; }
+    li { margin-bottom: 6px; }
+
+    .section-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      color: #0d1117;
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ====== Document Header ====== -->
+  <header class="doc-header">
+    <h1>Google OAuth ログイン実装（Auth.js v5）実装手順</h1>
+    <div class="meta">
+      <span>対応 Issue:
+        <a href="https://github.com/TYMtwilight/study-log/issues/5">
+          #5 [Phase 1] Google OAuth ログイン実装（Auth.js v5）
+        </a>
+      </span>
+      <span>作成日: 2026年4月28日</span>
+      <span>前提 Issue: #1 Next.js 初期セットアップ</span>
+    </div>
+  </header>
+
+  <!-- ====== Step 1 ====== -->
+  <section class="step">
+    <div class="step-heading">
+      <div class="step-badge">1</div>
+      <h2>Google Cloud Console の設定</h2>
+    </div>
+    <div class="step-body">
+      <p>Auth.js を動かす前に OAuth クレデンシャルを用意する。</p>
+      <ol>
+        <li><a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a> でプロジェクトを作成（または選択）する</li>
+        <li><strong>APIs &amp; Services → OAuth consent screen</strong> でアプリ情報を登録する
+          <ul>
+            <li>User Type: External</li>
+            <li>App name・サポートメール・デベロッパー連絡先を入力する</li>
+          </ul>
+        </li>
+        <li><strong>APIs &amp; Services → Credentials → Create Credentials → OAuth client ID</strong> を選択する
+          <ul>
+            <li>Application type: <strong>Web application</strong></li>
+            <li>Authorized redirect URIs に以下を追加する
+              <ul>
+                <li>開発: <code>http://localhost:3000/api/auth/callback/google</code></li>
+                <li>本番: <code>https://&lt;Cloud Run ドメイン&gt;/api/auth/callback/google</code></li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+        <li>発行された <strong>Client ID</strong> と <strong>Client Secret</strong> を控える</li>
+      </ol>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ====== Step 2 ====== -->
+  <section class="step">
+    <div class="step-heading">
+      <div class="step-badge">2</div>
+      <h2>パッケージインストール</h2>
+    </div>
+    <div class="step-body">
+      <pre><code>cd frontend
+npm install next-auth@latest react-icons</code></pre>
+      <div class="callout">
+        <strong><code>react-icons</code> について</strong><br>
+        Google など主要ブランドの SVG アイコンを React コンポーネントとして提供するライブラリ。<code>FaGoogle</code> は Font Awesome Brands に含まれる Google アイコン。SVG を手書きする必要がなくなる。
+      </div>
+      <div class="callout">
+        <strong>パッケージ名について</strong><br>
+        Auth.js v5 は当初 <code>next-auth@beta</code> で提供されていた。インストール前に <code>npm show next-auth dist-tags</code> で <code>latest</code> タグが v5 以降（<code>5.x.x</code>）を指しているか確認すること。<code>latest</code> が v4 系を指している場合は <code>npm install next-auth@beta</code> を使う。
+      </div>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ====== Step 3 ====== -->
+  <section class="step">
+    <div class="step-heading">
+      <div class="step-badge">3</div>
+      <h2>環境変数の設定</h2>
+    </div>
+    <div class="step-body">
+      <p><code>frontend/.env.local</code> に追記する（<code>frontend/.env.local.example</code> も同様に更新する）。</p>
+      <pre><code><span class="cmt"># Auth.js v5</span>
+AUTH_SECRET=&lt;openssl rand -base64 32 で生成した値&gt;
+AUTH_GOOGLE_ID=&lt;Google Client ID&gt;
+AUTH_GOOGLE_SECRET=&lt;Google Client Secret&gt;
+
+<span class="cmt"># Auth.js v5 は AUTH_URL を自動検出するが、本番では明示する
+# AUTH_URL=https://&lt;Cloud Run ドメイン&gt;</span>
+
+<span class="cmt"># Spring Boot API</span>
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8080</code></pre>
+
+      <p><code>AUTH_SECRET</code> の生成:</p>
+      <pre><code>openssl rand -base64 32</code></pre>
+
+      <div class="callout">
+        <strong><code>openssl rand -base64 32</code> の解説</strong><br>
+        <ul style="margin:8px 0 0; padding-left:20px;">
+          <li><code>openssl rand &lt;バイト数&gt;</code>: 暗号論的に安全な乱数を指定バイト数だけ生成する</li>
+          <li><code>-base64</code>: 生成したバイト列を Base64 エンコードして文字列として出力する</li>
+          <li><code>32</code>: 256 ビット（32 バイト）の乱数を生成する。Auth.js が推奨する最小強度</li>
+        </ul>
+        出力例: <code>K7gNU3sdo+OL0wNhqoVWhr3g6s1xYv72ol/pe/Unols=</code><br>
+        この文字列をそのまま <code>AUTH_SECRET</code> の値に貼り付ける。
+      </div>
+
+      <div class="callout">
+        <strong>v4 との変数名の違い</strong><br>
+        v4: <code>NEXTAUTH_SECRET</code>, <code>GOOGLE_CLIENT_ID</code>, <code>GOOGLE_CLIENT_SECRET</code><br>
+        v5: <code>AUTH_SECRET</code>, <code>AUTH_GOOGLE_ID</code>, <code>AUTH_GOOGLE_SECRET</code>（プロバイダー名がプレフィックスになる）
+      </div>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ====== Step 4 ====== -->
+  <section class="step">
+    <div class="step-heading">
+      <div class="step-badge">4</div>
+      <h2>auth.ts の作成</h2>
+    </div>
+    <div class="step-body">
+      <p>プロジェクトルート（<code>frontend/auth.ts</code>）に作成する。</p>
+      <pre><code>import NextAuth from "next-auth"
+import Google from "next-auth/providers/google"
+
+export const { handlers, auth, signIn, signOut } = NextAuth({
+  providers: [Google],
+  pages: {
+    signIn: "/login",
+    error: "/login",
+  },
+  callbacks: {
+    <span class="cmt">// middleware と連動してルート全体を保護する</span>
+    authorized({ auth }) {
+      return !!auth
+    },
+    <span class="cmt">// サインイン時に user.id を JWT トークンに保存する</span>
+    jwt({ token, user }) {
+      if (user) {
+        token.id = user.id
+      }
+      return token
+    },
+    <span class="cmt">// JWT トークンの id をセッションオブジェクトに伝播する</span>
+    session({ session, token }) {
+      session.user.id = token.id
+      return session
+    },
+  },
+})</code></pre>
+
+      <div class="callout">
+        <strong><code>session.strategy</code> について</strong><br>
+        DB アダプターを使用しない場合、Auth.js v5 はデフォルトで JWT 戦略を使用するため <code>session: { strategy: "jwt" }</code> の明示は不要。
+      </div>
+
+      <h3><code>handlers</code> / <code>auth</code> / <code>signIn</code> / <code>signOut</code> の役割</h3>
+      <p><code>NextAuth()</code> が返す 4 つのオブジェクトのそれぞれの役割と使い場所は次のとおり。</p>
+      <table>
+        <thead>
+          <tr><th>名前</th><th>種類</th><th>使う場所</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>handlers</code></td>
+            <td>HTTP ハンドラー</td>
+            <td>Route Handler（<code>/api/auth/[...nextauth]/route.ts</code>）</td>
+          </tr>
+          <tr>
+            <td><code>auth</code></td>
+            <td>セッション取得関数 / ミドルウェア</td>
+            <td>サーバーコンポーネント・<code>middleware.ts</code></td>
+          </tr>
+          <tr>
+            <td><code>signIn</code></td>
+            <td>ログイン開始関数</td>
+            <td>Server Action</td>
+          </tr>
+          <tr>
+            <td><code>signOut</code></td>
+            <td>ログアウト関数</td>
+            <td>Server Action</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p><strong><code>handlers</code></strong><br>
+      <code>/api/auth/*</code> のルートを処理する HTTP ハンドラー。Route Handler ファイルにそのままエクスポートして使う。これにより <code>/api/auth/signin</code>・<code>/api/auth/callback/google</code> などのエンドポイントが自動で動作する。</p>
+      <pre><code><span class="cmt">// app/api/auth/[...nextauth]/route.ts</span>
+export const { GET, POST } = handlers</code></pre>
+
+      <p><strong><code>auth</code></strong><br>
+      現在のセッション情報を取得する関数。サーバーコンポーネントや Server Action の中で呼び出す。また <code>middleware.ts</code> では <code>auth</code> 自体をミドルウェアとしてエクスポートして、未認証ユーザーのアクセス制御にも使う。</p>
+      <pre><code><span class="cmt">// サーバーコンポーネント</span>
+const session = await auth()
+<span class="cmt">// session.user.id, session.user.name, session.user.email が取れる</span>
+
+<span class="cmt">// middleware.ts</span>
+export { auth as middleware } from "@/auth"</code></pre>
+
+      <p><strong><code>signIn</code> / <code>signOut</code> を Server Action で使う理由</strong><br>
+      <code>signIn</code> / <code>signOut</code> は内部で HTTP レベルの 302 リダイレクトを返す。HTTP レスポンスのヘッダーを操作できるのはサーバー側だけであるため、これらの関数はサーバー上で実行する必要がある。</p>
+      <pre><code>クライアント側でできること:
+  window.location.href = "..." でページ遷移する（JavaScript の操作）
+
+サーバー側でできること:
+  HTTP レスポンスに Location ヘッダーを付けて 302 を返す（HTTP の仕組み）</code></pre>
+
+      <p>フォームの <code>action</code> に Server Action（<code>"use server"</code> を付けた関数）を渡すと、ボタン押下時にサーバー側で関数が実行され、そのレスポンスとして HTTP リダイレクトを返せる。<code>"use server"</code> がなければブラウザ上で実行されようとするため、リダイレクトに失敗する。</p>
+      <pre><code>&lt;form
+  action={async () =&gt; {
+    "use server"  <span class="cmt">// ← サーバー側で実行される</span>
+    await signIn("google", { redirectTo: "/" })
+    <span class="cmt">// ↑ 302 リダイレクトを HTTP レスポンスとして返す</span>
+  }}
+&gt;
+  &lt;button type="submit"&gt;Google でログイン&lt;/button&gt;
+&lt;/form&gt;</code></pre>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ====== Step 5 ====== -->
+  <section class="step">
+    <div class="step-heading">
+      <div class="step-badge">5</div>
+      <h2>Route Handler の作成</h2>
+    </div>
+    <div class="step-body">
+      <p><code>frontend/app/api/auth/[...nextauth]/route.ts</code> を作成する。</p>
+      <pre><code>import { handlers } from "@/auth"
+
+export const { GET, POST } = handlers</code></pre>
+
+      <div class="callout">
+        <strong><code>[...nextauth]</code> フォルダ名の意味</strong><br>
+        Next.js の App Router では、フォルダ名を <code>[...name]</code> にするとそれ以降のすべてのパスを 1 つのファイルで受け取れる（キャッチオールルート）。
+        <pre><code>/api/auth/signin          ┐
+/api/auth/signout         ├── すべてこのファイルが処理する
+/api/auth/callback/google ┘</code></pre>
+      </div>
+
+      <p>Auth.js v5 では、<code>handlers</code> をエクスポートするだけで <code>/api/auth/*</code> の全ルートが自動的に動作する。</p>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ====== Step 5.5 ====== -->
+  <section class="step">
+    <div class="step-heading">
+      <div class="step-badge">5.5</div>
+      <h2>middleware.ts の作成</h2>
+    </div>
+    <div class="step-body">
+      <p><strong>全ルートを認証必須にするための middleware</strong>。これがないと未ログインユーザーが保護ページへアクセスできる。</p>
+      <p>プロジェクトルート（<code>frontend/middleware.ts</code>）に作成する。</p>
+
+      <div class="callout">
+        <strong>Next.js 16 での <code>middleware.ts</code> の取り扱いについて</strong><br>
+        Next.js 16 では <code>middleware.ts</code> が <code>proxy.ts</code> に改名・非推奨化された。ただし <code>proxy.ts</code> は Node.js runtime 専用であり、<strong>Edge runtime はサポートされない</strong>。Auth.js v5 は Edge runtime で動作するため、Next.js 16 環境でも <strong><code>middleware.ts</code> を使い続けることが正しい選択</strong>。v16 アップグレードガイドも「Edge runtime を使い続けたい場合は <code>middleware</code> を使うこと」と明記している。
+      </div>
+
+      <pre><code>export { auth as middleware } from "@/auth"
+
+export const config = {
+  matcher: [
+    /*
+     * 以下を除くすべてのパスに適用する:
+     * - api/auth（Auth.js のコールバックルート）
+     * - _next/static, _next/image（Next.js 静的アセット）
+     * - favicon.ico
+     */
+    "/((?!api/auth|_next/static|_next/image|favicon.ico).*)",
+  ],
+}</code></pre>
+
+      <p><code>authorized</code> コールバックが <code>false</code> を返すと、Auth.js が自動的に <code>pages.signIn</code>（<code>/login</code>）へリダイレクトする。</p>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ====== Step 6 ====== -->
+  <section class="step">
+    <div class="step-heading">
+      <div class="step-badge">6</div>
+      <h2>TypeScript 型の拡張</h2>
+    </div>
+    <div class="step-body">
+      <p><code>frontend/types/next-auth.d.ts</code> を作成し、<code>session.user.id</code> の型を追加する。</p>
+      <pre><code>import type { DefaultSession } from "next-auth"
+
+declare module "next-auth" {
+  interface Session {
+    user: {
+      id: string
+    } &amp; DefaultSession["user"]
+  }
+}
+
+declare module "next-auth/jwt" {
+  interface JWT {
+    id: string
+  }
+}</code></pre>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ====== Step 7 ====== -->
+  <section class="step">
+    <div class="step-heading">
+      <div class="step-badge">7</div>
+      <h2>ログイン画面の実装</h2>
+    </div>
+    <div class="step-body">
+      <p><code>frontend/app/(auth)/login/page.tsx</code> を作成する。</p>
+      <pre><code>import { auth, signIn } from "@/auth"
+import { redirect } from "next/navigation"
+import { FaGoogle } from "react-icons/fa"
+
+export default async function LoginPage({
+  searchParams,
+}: {
+  <span class="cmt">// Next.js 15 では searchParams は Promise</span>
+  searchParams: Promise&lt;{ error?: string }&gt;
+}) {
+  const session = await auth()
+
+  <span class="cmt">// ログイン済みならダッシュボードへ</span>
+  if (session) redirect("/")
+
+  const { error } = await searchParams
+  const hasError = !!error
+
+  return (
+    &lt;div className="flex min-h-screen items-center justify-center bg-gray-50"&gt;
+      &lt;div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-md"&gt;
+        &lt;h1 className="mb-2 text-center text-2xl font-bold text-gray-900"&gt;
+          ログイン
+        &lt;/h1&gt;
+        &lt;p className="mb-8 text-center text-sm text-gray-500"&gt;
+          Google アカウントでログインしてアプリにアクセスします
+        &lt;/p&gt;
+
+        {hasError &amp;&amp; (
+          &lt;p className="mb-4 text-center text-sm text-red-500"&gt;
+            ログインに失敗しました。もう一度お試しください。
+          &lt;/p&gt;
+        )}
+
+        {/* Server Action でサインインを呼び出す */}
+        &lt;form
+          action={async () =&gt; {
+            "use server"
+            await signIn("google", { redirectTo: "/" })
+          }}
+        &gt;
+          &lt;button
+            type="submit"
+            className="flex w-full items-center justify-center gap-3 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition-colors"
+          &gt;
+            &lt;FaGoogle className="h-5 w-5 text-[#4285F4]" /&gt;
+            Google でログイン
+          &lt;/button&gt;
+        &lt;/form&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  )
+}</code></pre>
+
+      <div class="callout">
+        <strong><code>searchParams</code> に <code>error</code> を定義している理由</strong><br>
+        Auth.js v5 はログイン失敗時に <code>pages.error</code> で指定したページ（ここでは <code>/login</code>）へリダイレクトする際、失敗理由を <code>?error=...</code> クエリパラメータとして自動付与する。<br>
+        例: <code>/login?error=OAuthCallbackError</code>
+        <table style="margin-top:10px;">
+          <thead><tr><th><code>error</code> の値</th><th>意味</th></tr></thead>
+          <tbody>
+            <tr><td><code>OAuthCallbackError</code></td><td>OAuth コールバックでエラー</td></tr>
+            <tr><td><code>OAuthAccountNotLinked</code></td><td>別プロバイダーで登録済みのメール</td></tr>
+            <tr><td><code>AccessDenied</code></td><td>アクセス拒否</td></tr>
+          </tbody>
+        </table>
+        また、Next.js 15 では <code>searchParams</code> 全体が <code>Promise</code> になったため、型も <code>Promise&lt;{ error?: string }&gt;</code> となり <code>await</code> が必要になっている（詳細は Next.js 15 の Partial Prerendering 対応による変更）。
+      </div>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ====== Step 8 ====== -->
+  <section class="step">
+    <div class="step-heading">
+      <div class="step-badge">8</div>
+      <h2>ルートレイアウトへの SessionProvider 追加</h2>
+    </div>
+    <div class="step-body">
+      <p>Auth.js v5 では <code>SessionProvider</code> の設定は任意だが、クライアントコンポーネントで <code>useSession()</code> を使う場合は必要。</p>
+      <p><code>frontend/app/layout.tsx</code> を更新する。</p>
+      <pre><code>import type { Metadata } from "next"
+import { SessionProvider } from "next-auth/react"
+import "./globals.css"
+
+export const metadata: Metadata = {
+  title: "学習ログ",
+}
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    &lt;html lang="ja"&gt;
+      &lt;body&gt;
+        &lt;SessionProvider&gt;
+          {children}
+        &lt;/SessionProvider&gt;
+      &lt;/body&gt;
+    &lt;/html&gt;
+  )
+}</code></pre>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ====== Step 9 ====== -->
+  <section class="step">
+    <div class="step-heading">
+      <div class="step-badge">9</div>
+      <h2>セッション取得パターン</h2>
+    </div>
+    <div class="step-body">
+      <h3>サーバーコンポーネント（推奨）</h3>
+      <pre><code>import { auth } from "@/auth"
+
+export default async function SomePage() {
+  const session = await auth()
+  <span class="cmt">// session.user.id, session.user.name, session.user.email, session.user.image</span>
+}</code></pre>
+
+      <h3>クライアントコンポーネント</h3>
+      <pre><code>"use client"
+import { useSession } from "next-auth/react"
+
+export function UserInfo() {
+  const { data: session, status } = useSession()
+  if (status === "loading") return &lt;p&gt;Loading...&lt;/p&gt;
+  if (!session) return null
+  return &lt;p&gt;{session.user.name}&lt;/p&gt;
+}</code></pre>
+
+      <h3>Spring Boot API へのトークン渡し</h3>
+      <p>
+        Auth.js v5 のセッション JWT を Spring Boot に渡す方法は <strong>Issue #16（JWT 認証フィルター）・Issue #20（API 結合確認）</strong> で確定する。<br>
+        現時点では <code>session.user.id</code> がサーバーサイドで取得できれば Issue #5 の完了条件を満たす。
+      </p>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ====== Step 10 ====== -->
+  <section class="step">
+    <div class="step-heading">
+      <div class="step-badge">10</div>
+      <h2>動作確認</h2>
+    </div>
+    <div class="step-body">
+      <pre><code>cd frontend
+npm run dev</code></pre>
+      <table>
+        <thead>
+          <tr><th>確認項目</th><th>手順</th><th>期待結果</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>未認証リダイレクト</td>
+            <td>未ログイン状態で <code>http://localhost:3000/</code> へアクセス</td>
+            <td><code>/login</code> へリダイレクトされる</td>
+          </tr>
+          <tr>
+            <td>ログイン画面表示</td>
+            <td><code>http://localhost:3000/login</code> へアクセス</td>
+            <td>「Google でログイン」ボタンが表示される</td>
+          </tr>
+          <tr>
+            <td>ログイン成功後のリダイレクト</td>
+            <td>ボタンをクリックして Google 認証を完了</td>
+            <td><code>/</code> へ遷移する</td>
+          </tr>
+          <tr>
+            <td>ログイン済みで <code>/login</code> にアクセス</td>
+            <td>ログイン後に <code>/login</code> へ直接アクセス</td>
+            <td><code>/</code> へリダイレクトされる</td>
+          </tr>
+          <tr>
+            <td>セッション情報取得</td>
+            <td>ダッシュボードで <code>auth()</code> を呼ぶ</td>
+            <td><code>name</code>, <code>email</code>, <code>image</code>, <code>id</code> が取得できる</td>
+          </tr>
+          <tr>
+            <td>認証エラー</td>
+            <td>無効な OAuth フローを再現</td>
+            <td><code>/login?error=...</code> へリダイレクトされる</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ====== Step 11 ====== -->
+  <section class="step">
+    <div class="step-heading">
+      <div class="step-badge">11</div>
+      <h2>テストコードの作成</h2>
+    </div>
+    <div class="step-body">
+      <p><code>frontend/app/(auth)/login/page.test.tsx</code> を作成する。</p>
+
+      <h3>モックが必要な理由</h3>
+      <p><code>LoginPage</code> は内部で 2 つの外部依存を呼ぶが、それぞれ <strong>Jest/jsdom 環境では動かない具体的な理由</strong>がある。</p>
+      <table>
+        <thead>
+          <tr><th>依存</th><th>テスト環境で起きること</th><th>対処</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>auth()</code> from <code>@/auth</code></td>
+            <td>Cookie や JWT を読む HTTP リクエストコンテキストが Jest/jsdom に存在しないため、結果が不定または実行エラーになる</td>
+            <td><code>jest.fn()</code> で差し替えて戻り値を制御する</td>
+          </tr>
+          <tr>
+            <td><code>redirect()</code> from <code>next/navigation</code></td>
+            <td>Next.js の内部実装が <code>NEXT_REDIRECT</code> という特殊エラーをスローする仕組みになっており、モックしないとテストがそこでクラッシュする</td>
+            <td><code>jest.fn()</code> で差し替えて何もしない関数にする</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>テストコード</h3>
+      <pre><code>import { render, screen } from '@testing-library/react'
+import { auth } from '@/auth'
+import { redirect } from 'next/navigation'
+
+import LoginPage from '@/app/(auth)/login/page'
+
+jest.mock('@/auth', () =&gt; ({
+  auth: jest.fn(),
+  signIn: jest.fn(),
+}))
+jest.mock('next/navigation', () =&gt; ({
+  redirect: jest.fn(),
+}))
+
+describe('LoginPage', () =&gt; {
+  beforeEach(() =&gt; {
+    jest.clearAllMocks()
+  })
+
+  test('Google でログインボタンが表示される', async () =&gt; {
+    (auth as jest.Mock).mockResolvedValue(null)  <span class="cmt">// セッションなし = 未ログイン → redirect("/") がスキップされてボタンの描画まで到達する</span>
+    render(await LoginPage({ searchParams: Promise.resolve({}) }))
+    expect(screen.getByRole('button', { name: /Google でログイン/ })).toBeInTheDocument()
+  })
+
+  test('error パラメーターがある場合はエラーメッセージが表示される', async () =&gt; {
+    (auth as jest.Mock).mockResolvedValue(null)  <span class="cmt">// セッションなし = 未ログイン → redirect("/") がスキップされてボタンの描画まで到達する</span>
+    render(await LoginPage({ searchParams: Promise.resolve({ error: 'OAuthCallbackError' }) }))
+    expect(screen.getByText(/ログインに失敗しました/)).toBeInTheDocument()
+  })
+
+  test('error パラメーターがない場合はエラーメッセージが表示されない', async () =&gt; {
+    (auth as jest.Mock).mockResolvedValue(null)
+    render(await LoginPage({ searchParams: Promise.resolve({}) }))
+    expect(screen.queryByText(/ログインに失敗しました/)).not.toBeInTheDocument()
+  })
+
+  test('ログイン済みの場合は / へリダイレクトされる', async () =&gt; {
+    (auth as jest.Mock).mockResolvedValue({ user: { id: '1', name: 'テストユーザー', email: 'test@example.com' } })
+    await LoginPage({ searchParams: Promise.resolve({}) })
+    expect(jest.mocked(redirect)).toHaveBeenCalledWith('/')
+  })
+})</code></pre>
+
+      <div class="callout">
+        <strong><code>render(await LoginPage({...}))</code> の意味</strong><br>
+        <code>LoginPage</code> は非同期サーバーコンポーネントなので、<code>&lt;LoginPage /&gt;</code> で JSX 記法で渡しても React Testing Library が同期的にレンダリングできない場合がある。<code>await LoginPage({...})</code> でコンポーネント関数を先に評価して JSX を取得し、その結果を <code>render()</code> に渡すことで確実に動作する。
+      </div>
+
+      <div class="callout">
+        <strong><code>auth as jest.Mock</code> とキャストしている理由</strong><br>
+        <code>jest.mocked(auth)</code> が型推論上の理想だが、next-auth の <code>auth</code> は複数のオーバーロードを持つ複雑な関数であり、<code>jest.mocked()</code> がすべてのオーバーロードの交差型を解決しようとした結果 <code>never</code> になってしまう。<code>as jest.Mock</code> で強制的にモック関数の型に変換することで回避している。<code>redirect</code> は単純な関数型のため <code>jest.mocked()</code> がそのまま使える。
+      </div>
+
+      <h3>テストの実行</h3>
+      <pre><code>cd frontend
+npx jest app/\(auth\)/login/page.test.tsx</code></pre>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ====== Step 12 ====== -->
+  <section class="step">
+    <div class="step-heading">
+      <div class="step-badge">12</div>
+      <h2>E2E テスト設定</h2>
+    </div>
+    <div class="step-body">
+
+      <h3><code>playwright.config.ts</code> への <code>AUTH_TRUST_HOST</code> 追加</h3>
+      <p>CI（GitHub Actions）で E2E テストを実行すると、Auth.js v5 が <code>UntrustedHost</code> エラーをスローしてテストが失敗する。</p>
+
+      <p><strong>原因</strong><br>
+      Auth.js v5 はリクエストの <code>Host</code> ヘッダーを見て、信頼するホストかどうかを判定するセキュリティ機能を持つ。信頼するホストは <code>AUTH_URL</code> 環境変数で決まるが、CI 環境では <code>AUTH_URL</code> が未設定のため <code>localhost:3000</code> が信頼されずエラーになる。開発環境（<code>NODE_ENV=development</code>）では <code>localhost</code> が自動的に信頼されるが、CI は本番ビルドで動くため適用されない。</p>
+
+      <div class="callout">
+        <strong>なぜこの機能が存在するか</strong><br>
+        ホストヘッダーインジェクション攻撃の対策。攻撃者が <code>Host</code> ヘッダーを偽装して OAuth コールバック先を悪意のあるサーバーに差し替えるのを防ぐ。
+      </div>
+
+      <p><strong>修正</strong><br>
+      <code>playwright.config.ts</code> の <code>webServer</code> に <code>env</code> を追加して <code>AUTH_TRUST_HOST=true</code> と <code>...process.env</code> を渡す。</p>
+      <pre><code>webServer: {
+  command: 'npm run build &amp;&amp; npm run start',
+  url: 'http://localhost:3000',
+  reuseExistingServer: !process.env.CI,
+  timeout: 120_000,
+  stdout: 'ignore',
+  stderr: 'pipe',
+  env: {
+    ...process.env,          <span class="cmt">// CI 環境変数（AUTH_SECRET など）を WebServer へ引き継ぐ</span>
+    AUTH_TRUST_HOST: 'true', <span class="cmt">// CI で UntrustedHost エラーを回避する</span>
+  },
+},</code></pre>
+
+      <p><code>AUTH_TRUST_HOST=true</code> は「受け取るホストをすべて信頼する」という設定で、リバースプロキシや CI のように <code>AUTH_URL</code> を明示できない環境で使う。</p>
+
+      <div class="callout">
+        <strong>本番環境への影響はないか</strong><br>
+        <code>playwright.config.ts</code> はテスト実行時（<code>npm run test:e2e</code>）にしか適用されない。本番サーバー（Cloud Run）の環境変数はデプロイ設定で別途管理するため、<code>playwright.config.ts</code> の内容が本番に漏れ出ることはない。同様に <code>jest.config.ts</code> もテスト実行時にしか適用されない。
+      </div>
+
+      <h3><code>webServer.env</code> と <code>process.env</code> の引き継ぎ</h3>
+      <p>Playwright の <code>webServer.env</code> を指定すると、<code>process.env</code>（テストランナーのプロセス環境変数）を<strong>継承せず</strong>、指定したオブジェクトだけが子プロセスの環境変数になる。</p>
+      <table>
+        <thead>
+          <tr><th>状態</th><th>WebServer が受け取る環境変数</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>env</code> を指定しない</td>
+            <td><code>process.env</code> がそのまま引き継がれる</td>
+          </tr>
+          <tr>
+            <td><code>env: { AUTH_TRUST_HOST: 'true' }</code> のみ指定</td>
+            <td><code>AUTH_TRUST_HOST</code> のみ（<code>AUTH_SECRET</code> 等は届かない）</td>
+          </tr>
+          <tr>
+            <td><code>env: { ...process.env, AUTH_TRUST_HOST: 'true' }</code></td>
+            <td><code>process.env</code> 全体 + <code>AUTH_TRUST_HOST</code></td>
+          </tr>
+        </tbody>
+      </table>
+      <p><code>...process.env</code> を先に展開し <code>AUTH_TRUST_HOST: 'true'</code> を後に置くことで、明示的な値が優先される。</p>
+
+      <h3><code>AUTH_SECRET</code> について</h3>
+      <p>E2E テストでも Auth.js を動かすため <code>AUTH_SECRET</code> が必要。</p>
+      <ul>
+        <li>GitHub Actions の <strong>Settings → Secrets and variables → Actions</strong> で <code>AUTH_SECRET</code> を登録する</li>
+        <li>ワークフローで <code>env: AUTH_SECRET: ${{ secrets.AUTH_SECRET }}</code> として渡す</li>
+        <li><code>playwright.config.ts</code> の <code>webServer.env</code> では <code>...process.env</code> を展開することで <code>AUTH_SECRET</code> が WebServer（Next.js）へ届く</li>
+      </ul>
+      <p><code>webServer.env</code> に値を直書きするとリポジトリに残るため、必ずシークレット経由で渡すこと。</p>
+
+      <h3>reporter の設定</h3>
+      <pre><code>reporter: process.env.CI
+  ? [['github'], ['html', { open: 'never' }]]
+  : [['list'], ['html', { open: 'on-failure' }]],</code></pre>
+      <table>
+        <thead>
+          <tr><th>環境</th><th>レポーター</th><th>役割</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>CI</td>
+            <td><code>'github'</code></td>
+            <td>GitHub Actions の UI 上に失敗テストのアノテーション（赤い行番号マーカー）を出す</td>
+          </tr>
+          <tr>
+            <td>CI</td>
+            <td><code>'html'</code> + <code>{ open: 'never' }</code></td>
+            <td><code>playwright-report/</code> に HTML レポートを書き出す（アーティファクトとしてダウンロード可能になる）</td>
+          </tr>
+          <tr>
+            <td>ローカル</td>
+            <td><code>'list'</code></td>
+            <td>ターミナルに結果を出力する</td>
+          </tr>
+          <tr>
+            <td>ローカル</td>
+            <td><code>'html'</code> + <code>{ open: 'on-failure' }</code></td>
+            <td>テスト失敗時にブラウザで HTML レポートを自動表示する</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout">
+        <strong><code>'github'</code> のみでは不十分な理由</strong><br>
+        <code>'github'</code> reporter は GitHub Actions のアノテーション（stdout）に出力するだけで、<code>playwright-report/</code> にファイルを書き出さない。<code>'html'</code> を組み合わせることで、ワークフローのアーティファクトとして保存・ダウンロード可能なレポートが生成される。
+      </div>
+
+      <h3>CI ワークフローへの <code>needs</code> 依存追加</h3>
+      <p><code>frontend-ci.yml</code> の <code>e2e-test</code> ジョブに <code>needs: [lint-and-build]</code> を追加することで、ビルドが失敗した場合に E2E テストをスキップできる。</p>
+      <pre><code>e2e-test:
+  name: E2E Tests (Playwright)
+  needs: [lint-and-build]
+  runs-on: ubuntu-latest</code></pre>
+      <table>
+        <thead>
+          <tr><th>状態</th><th><code>needs</code> なし</th><th><code>needs: [lint-and-build]</code> あり</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>ビルド成功</td>
+            <td>E2E 実行</td>
+            <td>E2E 実行</td>
+          </tr>
+          <tr>
+            <td>ビルド失敗</td>
+            <td>E2E も起動（時間・コストの無駄）</td>
+            <td>E2E をスキップ</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ====== Completion Checklist ====== -->
+  <section>
+    <h2 class="section-title">完了条件チェック</h2>
+    <table class="checklist">
+      <thead>
+        <tr>
+          <th>完了条件</th>
+          <th>対応ステップ</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>auth.ts</code> で Auth.js v5 を設定し Google プロバイダーを追加</td>
+          <td>Step 4</td>
+        </tr>
+        <tr>
+          <td>全ルートをログイン必須にする（未認証は <code>/login</code> へリダイレクト）</td>
+          <td>Step 5.5</td>
+        </tr>
+        <tr>
+          <td>ログイン画面（<code>/login</code>）を実装（「Google でログイン」ボタン）</td>
+          <td>Step 7</td>
+        </tr>
+        <tr>
+          <td>OAuth 認証成功後に <code>/</code> へリダイレクト</td>
+          <td>Step 7（<code>redirectTo: "/"</code>）</td>
+        </tr>
+        <tr>
+          <td>認証失敗時にエラーメッセージを表示</td>
+          <td>Step 4（<code>pages.error: "/login"</code>）、Step 7（<code>?error</code> パラメータで表示）</td>
+        </tr>
+        <tr>
+          <td>セッション情報（name, email, image）をフロント側で取得できる</td>
+          <td>Step 9, 10</td>
+        </tr>
+        <tr>
+          <td>ログインページのテストコードを作成（4 ケース）</td>
+          <td>Step 11</td>
+        </tr>
+        <tr>
+          <td>E2E テストで UntrustedHost エラーを回避する</td>
+          <td>Step 12</td>
+        </tr>
+        <tr>
+          <td><code>AUTH_SECRET</code> を WebServer へ正しく伝播する（<code>...process.env</code>）</td>
+          <td>Step 12</td>
+        </tr>
+        <tr>
+          <td>CI・ローカルで HTML レポートを生成する</td>
+          <td>Step 12</td>
+        </tr>
+        <tr>
+          <td>E2E ジョブがビルド失敗時にスキップされる（<code>needs: [lint-and-build]</code>）</td>
+          <td>Step 12</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+</div>
+</body>
+</html>
