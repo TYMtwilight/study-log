@@ -44,12 +44,12 @@ export function createSubject(name: string): Subject {
 // id で1件更新。
 // 成功したら更新後のオブジェクト、存在しなければ null
 export function updateSubjectById(id: string, name: string): Subject | null {
-    const idx = subjects.findIndex((s) => s.id === id)
-    if(idx === -1) return null
-    subjects[idx] = { ...subjects[idx], name }
-    return subjects[idx]
+  const exists = subjects.some((s) => s.id === id)
+  if (!exists) return null
+  subjects = subjects.map((s) => (s.id === id ? { ...s, name } : s))
+  const subject = subjects.find((s) => s.id === id)!
+  return subject
 }
-
 
 // id で1件削除。
 // 削除できたら true、対象が無ければ false

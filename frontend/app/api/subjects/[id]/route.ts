@@ -4,9 +4,10 @@ import {
   updateSubjectById,
   isNameDuplicate,
 } from '@/lib/subjects/mockStore'
+import { subjectSchema } from '@/lib/subjects/schema'
 
 // GET /api/subjects/[id] - 1件取得（編集画面の初期値に使う）
-export async function GET(_req: Request, { params }: RouteContext<'/api/subjects/[id]'>) {
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const subject = getSubjectById(id)
   if (!subject) {
@@ -19,7 +20,7 @@ export async function GET(_req: Request, { params }: RouteContext<'/api/subjects
 }
 
 // PUT /api/subjects/[id] - 科目名を更新する
-export async function PUT(request: Request, { params }: RouteContext<'/api/subjects/[id]'>) {
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
 
   if (!getSubjectById(id)) {
@@ -29,28 +30,39 @@ export async function PUT(request: Request, { params }: RouteContext<'/api/subje
     )
   }
 
-  const body = await request.json()
-  const { name } = body as { name?: string }
-
-  if (!name || name.trim().length === 0) {
-    return Response.json({ code: 'VALIDATION_ERROR', message: '科目名は必須です' }, { status: 400 })
-  }
-
-  if (name.trim().length > 50) {
+  let body: unknown
+  try {
+    body = await request.json()
+  } catch {
     return Response.json(
-      { code: 'VALIDATION_ERROR', message: '科目名は50文字以内で入力してください' },
+      { code: 'BAD_REQUEST', message: 'リクエストボディが不正です' },
       { status: 400 },
     )
   }
+  const result = subjectSchema.safeParse(body)
+  if (!result.success) {
+    return Response.json(
+      { code: 'VALIDATION_ERROR', message: result.error.issues[0].message },
+      { status: 400 },
+    )
+  }
+  const { name } = result.data
 
-  if (isNameDuplicate(name.trim(), id)) {
+  if (isNameDuplicate(name, id)) {
     return Response.json(
       { code: 'CONFLICT', message: '同じ名前の科目がすでに存在します' },
       { status: 409 },
     )
   }
 
-  const updated = updateSubjectById(id, name.trim())
+  const updated = updateSubjectById(id, name)
+  if (!updated) {
+    return Response.json(
+      { code: 'NOT_FOUND', message: '指定した科目が存在しません' },
+      { status: 404 },
+    )
+  }
+
   return Response.json(updated)
 }
 

@@ -2,25 +2,15 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { z } from 'zod'
 
-import { useToast } from '../../_components/ToastContext'
-
+import { useToast } from '@/app/(protected)/_components/ToastContext'
+import { subjectSchema } from '@/lib/subjects/schema'
 import { 
     createSubject,
     updateSubject,
     fetchSubjectById,
-    ApiError,
 } from '@/lib/api/subjects'
-
-// バリデーションルール（Zod スキーマ）
-const subjectSchema = z.object({
-    name: z
-        .string()
-        .trim()
-        .min(1,  '科目名を入力してください')
-        .max(50, '科目名は50文字以内で入力してください'),
-})
+import { ApiError } from '@/lib/api/utils'
 
 type Props = {
     mode:       'new' | 'edit'
@@ -39,8 +29,8 @@ export default function SubjectForm({ mode, subjectId }: Props) {
     const [apiError, setApiError] = useState<string | null>(null)
     // 送信中フラグ（ボタン二重押し防止）
     const [submitting, setSubmitting] = useState(false)
-    // 編集モードの初期データ取得中フラグ
-    const [initialLoading, setInitialLoading] = useState(mode === 'edit')
+    // 編集モードの初期データ取得中フラグ（subjectId がない場合は最初からロード不要）
+    const [initialLoading, setInitialLoading] = useState(mode === 'edit' && !!subjectId)
     // 初期データ取得エラー
     const [loadError, setLoadError] = useState<string | null>(null)
 
@@ -81,7 +71,6 @@ export default function SubjectForm({ mode, subjectId }: Props) {
                 addToast('科目を更新しました', 'success')
             }
             router.push('/subjects')
-            router.refresh()
         } catch (e) {
             if (e instanceof ApiError && e.status === 409) {
                 // 重複エラーはフォーム上に表示（トーストではなく）

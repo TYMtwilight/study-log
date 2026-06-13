@@ -9,8 +9,8 @@ import {
     createSubject,
     updateSubject,
     fetchSubjectById,
-    ApiError,
 } from '@/lib/api/subjects'
+import { ApiError } from '@/lib/api/utils'
 
 // next/navigation の useRouter をモック化する
 jest.mock('next/navigation', () => ({
@@ -128,9 +128,9 @@ describe('SubjectForm - 編集モード', () => {
     })
 
     test('初期データ取得失敗時にエラーメッセージを表示する', async() => {
-        mockFetchById.mockRejectedValue(new Error('科目の取得に失敗しました (404)'))
+        mockFetchById.mockRejectedValue(new ApiError(404, '指定した科目が存在しません'))
         renderWithProviders(<SubjectForm mode="edit" subjectId="id-999" />)
 
-        expect(await screen.findByText('科目の取得に失敗しました (404)')).toBeInTheDocument()
+        expect(await screen.findByText('指定した科目が存在しません')).toBeInTheDocument()
     })
 })
