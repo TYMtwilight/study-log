@@ -1,0 +1,1476 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Issue #11 科目マスター登録/編集画面実装手順書</title>
+  <style>
+    :root {
+      --bg:          #f1f5f9;
+      --surface:     #ffffff;
+      --surface2:    #f8fafc;
+      --border:      #e2e8f0;
+      --border2:     #cbd5e1;
+      --text:        #0f172a;
+      --text-muted:  #64748b;
+      --text-light:  #94a3b8;
+      --accent:      #6366f1;
+      --accent-dim:  #eef2ff;
+      --accent-dark: #4338ca;
+      --green:       #16a34a;
+      --green-dim:   #f0fdf4;
+      --green-border:#bbf7d0;
+      --red:         #dc2626;
+      --red-dim:     #fef2f2;
+      --red-border:  #fecaca;
+      --blue:        #2563eb;
+      --blue-dim:    #eff6ff;
+      --blue-border: #bfdbfe;
+      --amber:       #d97706;
+      --amber-dim:   #fffbeb;
+      --amber-border:#fde68a;
+      --code-bg:     #0f172a;
+      --code-text:   #e2e8f0;
+      --sidebar-w:   260px;
+      --r:           10px;
+      --r-sm:        6px;
+      --shadow:      0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.05);
+      --shadow-md:   0 4px 12px rgba(0,0,0,.10), 0 2px 4px rgba(0,0,0,.06);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans JP', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.75;
+      display: flex;
+      min-height: 100vh;
+      font-size: 15px;
+    }
+
+    /* SIDEBAR */
+    #sidebar {
+      position: fixed; top: 0; left: 0;
+      width: var(--sidebar-w);
+      height: 100vh;
+      overflow-y: auto;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      z-index: 100;
+    }
+    #sidebar-header { padding: 20px 18px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .sidebar-issue { font-size: 11px; font-weight: 600; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+    .sidebar-title { font-size: 14px; font-weight: 700; color: var(--text); line-height: 1.35; }
+    .sidebar-meta  { margin-top: 8px; font-size: 11px; color: var(--text-muted); }
+    #toc { padding: 12px 10px; flex: 1; }
+    .toc-section { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text-light); padding: 10px 8px 4px; }
+    .toc-link { display: block; padding: 5px 8px; font-size: 13px; color: var(--text-muted); text-decoration: none; border-radius: var(--r-sm); transition: background .12s, color .12s; line-height: 1.4; }
+    .toc-link:hover { background: var(--accent-dim); color: var(--accent); }
+    .toc-link.active { background: var(--accent-dim); color: var(--accent); font-weight: 600; }
+    .toc-link.sub { padding-left: 20px; font-size: 12px; }
+    #sidebar-progress { padding: 14px 18px; border-top: 1px solid var(--border); flex-shrink: 0; }
+    .progress-label { font-size: 11px; color: var(--text-muted); margin-bottom: 6px; display: flex; justify-content: space-between; }
+    .progress-bar { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+    .progress-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width .3s; width: 0%; }
+
+    /* MAIN */
+    main { margin-left: var(--sidebar-w); max-width: 900px; width: 100%; padding: 0 0 100px; }
+
+    /* HERO */
+    #hero { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #6366f1 100%); padding: 48px 52px 44px; color: white; }
+    .hero-eyebrow { font-size: 12px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; opacity: .75; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    .hero-eyebrow::before { content: ''; display: block; width: 20px; height: 2px; background: rgba(255,255,255,.5); }
+    #hero h1 { font-size: 30px; font-weight: 800; line-height: 1.2; letter-spacing: -.5px; margin-bottom: 16px; }
+    #hero p { opacity: .85; font-size: 15px; max-width: 560px; line-height: 1.65; margin-bottom: 24px; }
+    .hero-tags { display: flex; gap: 8px; flex-wrap: wrap; }
+    .hero-tag { font-size: 12px; font-weight: 500; background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.2); padding: 4px 12px; border-radius: 99px; }
+
+    /* BUILD PREVIEW */
+    #build-preview { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; padding: 32px 52px; background: var(--surface2); border-bottom: 1px solid var(--border); }
+    .preview-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 16px; box-shadow: var(--shadow); }
+    .preview-card-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; margin-bottom: 10px; color: var(--text-muted); }
+
+    /* Mock form */
+    .mock-form { display: flex; flex-direction: column; gap: 10px; }
+    .mock-label { font-size: 10px; font-weight: 600; color: var(--text-muted); margin-bottom: 3px; }
+    .mock-input { border: 1px solid var(--border2); border-radius: 5px; padding: 6px 10px; font-size: 11px; color: var(--text); background: var(--surface); width: 100%; }
+    .mock-input.error { border-color: var(--red); }
+    .mock-error { font-size: 10px; color: var(--red); margin-top: 2px; }
+    .mock-actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 4px; }
+    .mock-btn { font-size: 10px; padding: 5px 12px; border-radius: 5px; border: 1px solid var(--border2); color: var(--text-muted); cursor: default; }
+    .mock-btn.primary { background: #6366f1; color: white; border-color: #6366f1; }
+    .mock-toast { display: flex; align-items: center; gap: 8px; border-radius: 7px; padding: 9px 12px; font-size: 11px; border-left: 3px solid; margin-top: 10px; }
+    .mock-toast.success { background: var(--green-dim); border-color: var(--green); color: #14532d; }
+    .mock-toast.error   { background: var(--red-dim);   border-color: var(--red);   color: #7f1d1d; }
+
+    /* SECTIONS */
+    .section { padding: 44px 52px 0; }
+    h2 { font-size: 22px; font-weight: 800; color: var(--text); margin-bottom: 6px; display: flex; align-items: center; gap: 12px; line-height: 1.3; }
+    .h2-num { width: 32px; height: 32px; background: var(--accent); color: white; border-radius: 8px; font-size: 14px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .section-desc { color: var(--text-muted); font-size: 14px; margin-bottom: 24px; margin-top: 4px; }
+    h3 { font-size: 17px; font-weight: 700; color: var(--text); margin: 32px 0 10px; display: flex; align-items: center; gap: 8px; }
+    h3::before { content: ''; display: block; width: 4px; height: 18px; background: var(--accent); border-radius: 2px; flex-shrink: 0; }
+    h4 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: var(--text-muted); margin: 20px 0 8px; }
+    p { margin-bottom: 14px; color: var(--text); line-height: 1.75; }
+    .divider { height: 1px; background: var(--border); margin: 44px 0 0; }
+
+    /* TABLES */
+    .table-wrap { overflow-x: auto; margin: 14px 0 24px; border-radius: var(--r); border: 1px solid var(--border); box-shadow: var(--shadow); }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; background: var(--surface); }
+    th { background: var(--surface2); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: var(--text-muted); padding: 10px 14px; border-bottom: 1px solid var(--border); text-align: left; }
+    td { padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: top; line-height: 1.6; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--surface2); }
+
+    /* CODE BLOCKS */
+    .code-block { margin: 14px 0 24px; border-radius: var(--r); overflow: hidden; box-shadow: var(--shadow-md); }
+    .code-header { background: #1e293b; padding: 10px 16px; display: flex; align-items: center; gap: 10px; }
+    .code-dots { display: flex; gap: 5px; }
+    .code-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .code-dot.r { background: #ff5f57; }
+    .code-dot.y { background: #ffbd2e; }
+    .code-dot.g { background: #28c840; }
+    .code-filename { font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace; font-size: 12px; color: #94a3b8; flex: 1; }
+    .code-lang { font-size: 10px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: .5px; }
+    pre { background: var(--code-bg); color: var(--code-text); padding: 20px 22px; font-size: 13px; line-height: 1.7; overflow-x: auto; margin: 0; }
+    code { font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', 'Consolas', monospace; }
+    :not(pre) > code { background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; font-size: 13px; color: var(--accent); }
+    .kw  { color: #7dd3fc; }
+    .st  { color: #86efac; }
+    .ty  { color: #fcd34d; }
+    .fn  { color: #c4b5fd; }
+    .cm  { color: #475569; font-style: italic; }
+    .nu  { color: #fb923c; }
+    .op  { color: #94a3b8; }
+    .hl  { background: rgba(99,102,241,.15); display: block; margin: 0 -22px; padding: 0 22px; }
+
+    /* CALLOUTS */
+    .callout { border-radius: var(--r); padding: 16px 20px; margin: 16px 0 24px; font-size: 14px; border: 1px solid; display: flex; gap: 14px; align-items: flex-start; line-height: 1.65; }
+    .callout.info  { background: var(--blue-dim);  border-color: var(--blue-border); color: #1e3a8a; }
+    .callout.ok    { background: var(--green-dim); border-color: var(--green-border); color: #14532d; }
+    .callout.warn  { background: var(--amber-dim); border-color: var(--amber-border); color: #78350f; }
+    .callout.tip   { background: var(--accent-dim); border-color: #c7d2fe; color: #3730a3; }
+    .callout-icon  { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+    .callout-body  { flex: 1; }
+    .callout-title { font-weight: 700; margin-bottom: 4px; display: block; }
+    .callout strong { font-weight: 700; }
+
+    /* BADGES */
+    .badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 99px; }
+    .badge.new  { background: var(--green-dim); color: var(--green); border: 1px solid var(--green-border); }
+    .badge.mod  { background: var(--amber-dim); color: var(--amber); border: 1px solid var(--amber-border); }
+    .badge.test { background: var(--blue-dim);  color: var(--blue);  border: 1px solid var(--blue-border); }
+
+    /* CHECKLIST */
+    .checklist { list-style: none; margin: 12px 0 24px; display: flex; flex-direction: column; gap: 8px; }
+    .checklist li { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; line-height: 1.5; }
+    .check-icon { width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; margin-top: 1px; }
+    .check-icon.done { background: var(--green-dim); color: var(--green); border: 1.5px solid var(--green-border); }
+    .check-icon.todo { background: var(--surface2); color: var(--text-light); border: 1.5px solid var(--border2); }
+
+    /* FLOW DIAGRAM */
+    .flow { display: flex; align-items: center; gap: 0; margin: 20px 0 28px; flex-wrap: wrap; }
+    .flow-box { background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; padding: 10px 16px; font-size: 13px; font-weight: 600; text-align: center; box-shadow: var(--shadow); min-width: 100px; }
+    .flow-box.accent { background: var(--accent-dim); border-color: #a5b4fc; color: var(--accent-dark); }
+    .flow-box.green  { background: var(--green-dim);  border-color: var(--green-border); color: #14532d; }
+    .flow-box.red    { background: var(--red-dim);    border-color: var(--red-border);   color: #7f1d1d; }
+    .flow-arrow { color: var(--text-light); font-size: 18px; padding: 0 6px; }
+    .flow-label { font-size: 10px; font-weight: 600; color: var(--text-muted); text-align: center; margin-top: 4px; }
+    .flow-col { display: flex; flex-direction: column; align-items: center; }
+
+    /* STEP HEADER */
+    .step-header { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+    .step-num { font-size: 11px; font-weight: 700; color: var(--accent); background: var(--accent-dim); padding: 2px 10px; border-radius: 99px; }
+
+    /* FILE TREE */
+    .filetree { background: var(--code-bg); color: var(--code-text); border-radius: var(--r); padding: 18px 22px; font-family: 'SF Mono','Cascadia Code','Consolas',monospace; font-size: 13px; line-height: 1.9; margin: 14px 0 24px; box-shadow: var(--shadow-md); white-space: pre; overflow-x: auto; }
+    .ft-dir  { color: #7dd3fc; }
+    .ft-new  { color: #86efac; }
+    .ft-mod  { color: #fcd34d; }
+    .ft-dim  { color: #475569; }
+
+    ol { margin: 10px 0 20px 20px; }
+    ol li { margin-bottom: 8px; font-size: 14px; line-height: 1.65; }
+    ul { margin: 10px 0 20px 20px; }
+    ul li { margin-bottom: 6px; font-size: 14px; line-height: 1.65; }
+  </style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════ SIDEBAR -->
+<nav id="sidebar">
+  <div id="sidebar-header">
+    <div class="sidebar-issue">Issue #11 · Phase 1</div>
+    <div class="sidebar-title">科目マスター<br>登録 / 編集画面実装</div>
+    <div class="sidebar-meta">Next.js · Zod · React</div>
+  </div>
+
+  <div id="toc">
+    <div class="toc-section">はじめに</div>
+    <a class="toc-link" href="#overview">概要と完了条件</a>
+    <a class="toc-link" href="#architecture">実装の全体像</a>
+    <a class="toc-link" href="#files">変更ファイル一覧</a>
+
+    <div class="toc-section">実装手順</div>
+    <a class="toc-link" href="#step1">Step 1 — Zod インストール</a>
+    <a class="toc-link" href="#step2">Step 2 — mockStore 拡張</a>
+    <a class="toc-link sub" href="#step2-why">なぜ mockStore を使うの？</a>
+    <a class="toc-link" href="#step3">Step 3 — Route Handler 更新</a>
+    <a class="toc-link sub" href="#step3-schema">① schema.ts 作成</a>
+    <a class="toc-link sub" href="#step3-post">② POST（登録）</a>
+    <a class="toc-link sub" href="#step3-getput">③ GET / PUT（取得・更新）</a>
+    <a class="toc-link" href="#step4">Step 4 — API クライアント拡張</a>
+    <a class="toc-link sub" href="#step4-utils">① utils.ts 作成</a>
+    <a class="toc-link sub" href="#step4-subjects">② subjects.ts 更新</a>
+    <a class="toc-link" href="#step5">Step 5 — SubjectForm 実装</a>
+    <a class="toc-link sub" href="#step5-zod">Zod バリデーション</a>
+    <a class="toc-link sub" href="#step5-submit">送信処理</a>
+    <a class="toc-link sub" href="#step5-edit">編集モード（初期値取得）</a>
+    <a class="toc-link" href="#step6">Step 6 — ページ実装</a>
+    <a class="toc-link" href="#step7">Step 7 — テスト実装</a>
+
+    <div class="toc-section">確認</div>
+    <a class="toc-link" href="#verify">動作確認チェックリスト</a>
+  </div>
+
+  <div id="sidebar-progress">
+    <div class="progress-label">
+      <span>進捗</span>
+      <span id="progress-pct">0 / 7</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+  </div>
+</nav>
+
+<!-- ════════════════════════════════════════════ MAIN -->
+<main>
+
+  <!-- HERO -->
+  <section id="hero">
+    <div class="hero-eyebrow">実装手順書</div>
+    <h1>科目マスター<br>登録 / 編集画面実装</h1>
+    <p>
+      <code style="background:rgba(255,255,255,.15);border:none;color:white">/subjects/new</code> と
+      <code style="background:rgba(255,255,255,.15);border:none;color:white">/subjects/[id]/edit</code> の
+      フォーム画面を実装します。Zod スキーマを共有モジュールに抽出し、Route Handler と SubjectForm で再利用します。
+      ApiError / parseErrorBody を <code style="background:rgba(255,255,255,.15);border:none;color:white">lib/api/utils.ts</code> に集約して、
+      エラー処理を統一します。
+    </p>
+    <div class="hero-tags">
+      <span class="hero-tag">Next.js App Router</span>
+      <span class="hero-tag">Zod v4</span>
+      <span class="hero-tag">React useState / useEffect</span>
+      <span class="hero-tag">Route Handler</span>
+      <span class="hero-tag">Jest</span>
+    </div>
+  </section>
+
+  <!-- BUILD PREVIEW -->
+  <div id="build-preview">
+    <div class="preview-card">
+      <div class="preview-card-label">新規登録 — /subjects/new</div>
+      <div class="mock-form">
+        <div>
+          <div class="mock-label">科目名 *</div>
+          <input class="mock-input" value="Spring WebFlux" readonly />
+        </div>
+        <div class="mock-actions">
+          <span class="mock-btn">キャンセル</span>
+          <span class="mock-btn primary">保存</span>
+        </div>
+        <div class="mock-toast success">✓ 科目を登録しました</div>
+      </div>
+    </div>
+    <div class="preview-card">
+      <div class="preview-card-label">重複エラー — 409 Conflict</div>
+      <div class="mock-form">
+        <div>
+          <div class="mock-label">科目名 *</div>
+          <input class="mock-input error" value="Spring Boot" readonly />
+          <div class="mock-error">同じ名前の科目がすでに存在します</div>
+        </div>
+        <div class="mock-actions">
+          <span class="mock-btn">キャンセル</span>
+          <span class="mock-btn primary">保存</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── OVERVIEW ── -->
+  <section class="section" id="overview">
+    <div class="step-header">
+      <h2><span class="h2-num">0</span>概要と完了条件</h2>
+    </div>
+    <p class="section-desc">Issue #11 で実装する機能と、完了の判定基準を確認しましょう。</p>
+
+    <ul class="checklist">
+      <li><span class="check-icon todo">○</span><span>科目名のテキスト入力フォームを実装する</span></li>
+      <li><span class="check-icon todo">○</span><span>Zod でバリデーション（必須・1〜50文字）を実装する</span></li>
+      <li><span class="check-icon todo">○</span><span>「保存」ボタンで API を呼び出す（新規: POST / 編集: PUT）</span></li>
+      <li><span class="check-icon todo">○</span><span>登録・更新成功後に <code>/subjects</code> へ遷移し、成功トーストを表示する</span></li>
+      <li><span class="check-icon todo">○</span><span>「キャンセル」ボタンで <code>/subjects</code> へ戻る</span></li>
+      <li><span class="check-icon todo">○</span><span>重複エラー（409）時にフォーム上にエラーメッセージを表示する</span></li>
+      <li><span class="check-icon todo">○</span><span>編集時は既存の科目名を初期値として表示する</span></li>
+    </ul>
+
+    <div class="callout info">
+      <span class="callout-icon">ℹ️</span>
+      <div class="callout-body">
+        <span class="callout-title">前提</span>
+        Issue #10（科目マスター一覧）が完成していることが前提です。
+        <code>ToastContext</code>・<code>Toaster</code>・<code>SubjectList</code> は実装済みとして進めます。
+      </div>
+    </div>
+  </section>
+  <div class="divider"></div>
+
+  <!-- ── ARCHITECTURE ── -->
+  <section class="section" id="architecture">
+    <div class="step-header">
+      <h2><span class="h2-num" style="background:var(--text-muted)">→</span>実装の全体像</h2>
+    </div>
+    <p class="section-desc">ユーザー操作からデータ保存までの流れを把握しておきましょう。</p>
+
+    <h3>データフロー（新規登録）</h3>
+    <div class="flow">
+      <div class="flow-col">
+        <div class="flow-box accent">ユーザー入力<br><small style="font-weight:400;font-size:11px">科目名を入力</small></div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-col">
+        <div class="flow-box accent">Zod 検証<br><small style="font-weight:400;font-size:11px">safeParse()</small></div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-col">
+        <div class="flow-box">lib/api/subjects<br><small style="font-weight:400;font-size:11px">createSubject()</small></div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-col">
+        <div class="flow-box">Route Handler<br><small style="font-weight:400;font-size:11px">POST /api/subjects</small></div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-col">
+        <div class="flow-box">mockStore<br><small style="font-weight:400;font-size:11px">createSubject()</small></div>
+      </div>
+    </div>
+    <div class="flow" style="margin-top:8px">
+      <div class="flow-col">
+        <div class="flow-box green">成功 201<br><small style="font-weight:400;font-size:11px">→ /subjects へ遷移</small></div>
+      </div>
+      <span class="flow-arrow" style="color:var(--text-light)">←</span>
+      <div class="flow-col">
+        <div class="flow-box red">409 Conflict<br><small style="font-weight:400;font-size:11px">→ フォームにエラー</small></div>
+      </div>
+    </div>
+
+    <h3>コンポーネント構成</h3>
+    <p>新規と編集で <strong>同じフォームコンポーネント</strong>（<code>SubjectForm</code>）を共用します。
+    <code>mode</code> プロップで動作を切り替えます。</p>
+
+    <div class="filetree">
+<span class="ft-dir">app/(protected)/subjects/</span>
+├── page.tsx                   <span class="ft-dim">← 一覧（変更なし）</span>
+├── <span class="ft-dir">new/</span>
+│   └── <span class="ft-new">page.tsx</span>             <span class="ft-dim">← ★ 新規登録ページ（更新）</span>
+├── <span class="ft-dir">[id]/edit/</span>
+│   └── <span class="ft-new">page.tsx</span>             <span class="ft-dim">← ★ 編集ページ（更新）</span>
+└── <span class="ft-dir">_components/</span>
+    ├── <span class="ft-new">SubjectForm.tsx</span>      <span class="ft-dim">← ★ 新規：共有フォーム</span>
+    ├── <span class="ft-new">SubjectForm.test.tsx</span> <span class="ft-dim">← ★ 新規：ユニットテスト</span>
+    ├── SubjectList.tsx          <span class="ft-dim">← 変更なし</span>
+    └── ConfirmDialog.tsx        <span class="ft-dim">← 変更なし</span>
+
+<span class="ft-dir">lib/</span>
+├── <span class="ft-dir">api/</span>
+│   ├── <span class="ft-new">utils.ts</span>             <span class="ft-dim">← ★ 新規：ApiError / parseErrorBody</span>
+│   └── <span class="ft-mod">subjects.ts</span>          <span class="ft-dim">← ★ 修正：parseErrorBody を使う</span>
+└── <span class="ft-dir">subjects/</span>
+    ├── <span class="ft-new">schema.ts</span>            <span class="ft-dim">← ★ 新規：共有 Zod スキーマ</span>
+    └── <span class="ft-mod">mockStore.ts</span>         <span class="ft-dim">← ★ 修正：CRUD 追加</span>
+
+<span class="ft-dir">app/api/subjects/</span>
+├── <span class="ft-mod">route.ts</span>                <span class="ft-dim">← ★ 修正：POST 追加・Zod 化</span>
+└── <span class="ft-dir">[id]/</span>
+    └── <span class="ft-mod">route.ts</span>            <span class="ft-dim">← ★ 修正：GET / PUT 追加・Zod 化</span>
+    </div>
+  </section>
+  <div class="divider"></div>
+
+  <!-- ── STEP 1 ── -->
+  <section class="section" id="step1">
+    <div class="step-header">
+      <span class="step-num">Step 1</span>
+      <h2>Zod インストール</h2>
+    </div>
+    <p class="section-desc">バリデーションライブラリの Zod をプロジェクトに追加します。</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <div class="code-dots"><span class="code-dot r"></span><span class="code-dot y"></span><span class="code-dot g"></span></div>
+        <span class="code-filename">terminal — frontend/ ディレクトリで実行</span>
+        <span class="code-lang">shell</span>
+      </div>
+      <pre><code><span class="cm"># frontend/ フォルダに移動してから実行</span>
+npm install zod</code></pre>
+    </div>
+
+    <div class="callout tip">
+      <span class="callout-icon">💡</span>
+      <div class="callout-body">
+        <span class="callout-title">Zod とは？</span>
+        TypeScript のための<strong>スキーマバリデーションライブラリ</strong>です。
+        「名前は必須・50文字以内」のようなルールをコードで定義し、
+        入力値を安全に検証できます。バックエンドにリクエストを送る前にフロント側でも検証するため、
+        UX が向上します。
+      </div>
+    </div>
+
+    <p>インストール後、<code>package.json</code> の <code>dependencies</code> に <code>"zod": "^4.x.x"</code> が追加されていれば成功です。</p>
+  </section>
+  <div class="divider"></div>
+
+  <!-- ── STEP 2 ── -->
+  <section class="section" id="step2">
+    <div class="step-header">
+      <span class="step-num">Step 2</span>
+      <h2>mockStore 拡張 <span class="badge mod">修正</span></h2>
+    </div>
+    <p class="section-desc">
+      Phase 1 では Spring Boot バックエンドがまだないため、Next.js の Route Handler 内で
+      インメモリのデータストアを使います。現在の <code>mockStore.ts</code> には「一覧取得」と「削除」しかないので、
+      「取得」「登録」「更新」「重複チェック」を追加します。
+    </p>
+
+    <div id="step2-why">
+      <div class="callout info">
+        <span class="callout-icon">ℹ️</span>
+        <div class="callout-body">
+          <span class="callout-title">なぜ mockStore を使うの？</span>
+          Phase 2 で Spring Boot API が完成したら、<code>lib/api/subjects.ts</code> の
+          ベース URL を切り替えるだけで実際のバックエンドに繋げられます。
+          フロントの実装を変えずにバックエンドを差し替えられるのが設計のポイントです。
+        </div>
+      </div>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header">
+        <div class="code-dots"><span class="code-dot r"></span><span class="code-dot y"></span><span class="code-dot g"></span></div>
+        <span class="code-filename">lib/subjects/mockStore.ts</span>
+        <span class="code-lang">typescript</span>
+      </div>
+      <pre><code><span class="kw">import</span> <span class="kw">type</span> { <span class="ty">Subject</span> } <span class="kw">from</span> <span class="st">'@/types/subject'</span>
+
+<span class="kw">let</span> subjects: <span class="ty">Subject</span>[] = [
+  { id: <span class="st">'660e8400-e29b-41d4-a716-446655440001'</span>, name: <span class="st">'Spring Boot'</span>, createdAt: <span class="st">'2026-01-10T00:00:00Z'</span> },
+  { id: <span class="st">'770e8400-e29b-41d4-a716-446655440002'</span>, name: <span class="st">'Next.js'</span>,     createdAt: <span class="st">'2026-02-15T00:00:00Z'</span> },
+  { id: <span class="st">'880e8400-e29b-41d4-a716-446655440003'</span>, name: <span class="st">'Zod'</span>,         createdAt: <span class="st">'2026-03-20T00:00:00Z'</span> },
+]
+
+<span class="kw">export function</span> <span class="fn">getAllSubjects</span>(): <span class="ty">Subject</span>[] {
+  <span class="kw">return</span> [...subjects]
+}
+
+<span class="hl"><span class="cm">// id で1件取得。見つからなければ undefined</span>
+<span class="kw">export function</span> <span class="fn">getSubjectById</span>(id: <span class="ty">string</span>): <span class="ty">Subject</span> | <span class="ty">undefined</span> {
+  <span class="kw">return</span> subjects.<span class="fn">find</span>((s) => s.id === id)
+}
+
+<span class="cm">// 名前の重複チェック。excludeId を指定すると自分自身を除外（更新時に使う）</span>
+<span class="kw">export function</span> <span class="fn">isNameDuplicate</span>(name: <span class="ty">string</span>, excludeId?: <span class="ty">string</span>): <span class="ty">boolean</span> {
+  <span class="kw">return</span> subjects.<span class="fn">some</span>((s) => s.name === name &amp;&amp; s.id !== excludeId)
+}
+
+<span class="cm">// 科目を1件登録して返す</span>
+<span class="kw">export function</span> <span class="fn">createSubject</span>(name: <span class="ty">string</span>): <span class="ty">Subject</span> {
+  <span class="kw">const</span> subject: <span class="ty">Subject</span> = {
+    id:        crypto.<span class="fn">randomUUID</span>(),
+    name,
+    createdAt: <span class="kw">new</span> <span class="ty">Date</span>().<span class="fn">toISOString</span>(),
+  }
+  subjects = [...subjects, subject]
+  <span class="kw">return</span> subject
+}
+
+<span class="cm">// id で1件更新。成功したら更新後のオブジェクト、存在しなければ null</span>
+<span class="kw">export function</span> <span class="fn">updateSubjectById</span>(id: <span class="ty">string</span>, name: <span class="ty">string</span>): <span class="ty">Subject</span> | <span class="kw">null</span> {
+  <span class="kw">const</span> exists = subjects.<span class="fn">some</span>((s) => s.id === id)
+  <span class="kw">if</span> (!exists) <span class="kw">return null</span>
+  subjects = subjects.<span class="fn">map</span>((s) => (s.id === id ? { ...s, name } : s))
+  <span class="kw">const</span> subject = subjects.<span class="fn">find</span>((s) => s.id === id)!
+  <span class="kw">return</span> subject
+}</span>
+
+<span class="cm">// id で1件削除。削除できたら true、対象が無ければ false</span>
+<span class="kw">export function</span> <span class="fn">deleteSubjectById</span>(id: <span class="ty">string</span>): <span class="ty">boolean</span> {
+  <span class="kw">const</span> before = subjects.length
+  subjects = subjects.<span class="fn">filter</span>((s) => s.id !== id)
+  <span class="kw">return</span> subjects.length &lt; before
+}</code></pre>
+    </div>
+
+    <div class="callout warn">
+      <span class="callout-icon">⚠️</span>
+      <div class="callout-body">
+        <span class="callout-title">インメモリの注意点</span>
+        このデータは <strong>サーバープロセスのメモリ上</strong>に存在します。
+        <code>npm run dev</code> を再起動するとリセットされます。
+        また、Next.js の Hot Reload が走るとリセットされることもあります。これは Phase 1 の仕様です。
+      </div>
+    </div>
+  </section>
+  <div class="divider"></div>
+
+  <!-- ── STEP 3 ── -->
+  <section class="section" id="step3">
+    <div class="step-header">
+      <span class="step-num">Step 3</span>
+      <h2>Route Handler 更新 <span class="badge mod">修正</span></h2>
+    </div>
+    <p class="section-desc">
+      Zod スキーマを共有モジュールに抽出してから、Route Handler に POST / GET / PUT を追加します。
+      バリデーションルールを一箇所にまとめることで、フロントとサーバーで同じスキーマを使えます。
+    </p>
+
+    <h3 id="step3-schema">① 共有スキーマの作成 — lib/subjects/schema.ts <span class="badge new">新規</span></h3>
+    <p>
+      科目名のバリデーションルールは Route Handler（サーバー）と SubjectForm（クライアント）の
+      両方に必要です。同じルールをファイルごとに書くと将来の変更時に漏れが起きるので、
+      <code>lib/subjects/schema.ts</code> に一度だけ定義します。
+    </p>
+    <p>
+      Zod の <code>.trim()</code> を使うと、入力値の前後の空白を自動で取り除いてから
+      長さチェックを行います。「スペースだけの入力」も弾けるので便利です。
+    </p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <div class="code-dots"><span class="code-dot r"></span><span class="code-dot y"></span><span class="code-dot g"></span></div>
+        <span class="code-filename">lib/subjects/schema.ts</span>
+        <span class="code-lang">typescript</span>
+      </div>
+      <pre><code><span class="kw">import</span> { z } <span class="kw">from</span> <span class="st">'zod'</span>
+
+<span class="kw">export const</span> subjectSchema = z.<span class="fn">object</span>({
+  name: z
+    .<span class="fn">string</span>()
+    .<span class="fn">trim</span>()
+    .<span class="fn">min</span>(<span class="nu">1</span>, <span class="st">'科目名を入力してください'</span>)
+    .<span class="fn">max</span>(<span class="nu">50</span>, <span class="st">'科目名は50文字以内で入力してください'</span>),
+})
+
+<span class="kw">export type</span> <span class="ty">SubjectInput</span> = z.<span class="fn">infer</span>&lt;<span class="kw">typeof</span> subjectSchema&gt;</code></pre>
+    </div>
+
+    <div class="callout tip">
+      <span class="callout-icon">💡</span>
+      <div class="callout-body">
+        <span class="callout-title">.trim() を使う理由</span>
+        Zod の <code>.trim()</code> はバリデーション前に値を正規化（前後空白除去）します。
+        「　Spring Boot　」のような入力も「Spring Boot」として処理されます。
+        Route Handler で手動 <code>.trim()</code> を呼ぶ必要がなくなります。
+      </div>
+    </div>
+
+    <h3 id="step3-post">② POST（登録）— route.ts</h3>
+    <p>既存の <code>GET</code> はそのままに、<code>POST</code> 関数を追記します。
+    <code>request.json()</code> のパースを <code>try/catch</code> で囲むことで、
+    壊れたリクエストボディが届いても 500 にならず 400 を返せます。</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <div class="code-dots"><span class="code-dot r"></span><span class="code-dot y"></span><span class="code-dot g"></span></div>
+        <span class="code-filename">app/api/subjects/route.ts</span>
+        <span class="code-lang">typescript</span>
+      </div>
+      <pre><code><span class="kw">import</span> { <span class="fn">getAllSubjects</span>, <span class="fn">createSubject</span>, <span class="fn">isNameDuplicate</span> } <span class="kw">from</span> <span class="st">'@/lib/subjects/mockStore'</span>
+<span class="kw">import</span> { subjectSchema } <span class="kw">from</span> <span class="st">'@/lib/subjects/schema'</span>
+
+<span class="cm">// GET /api/subjects — 科目一覧を返す</span>
+<span class="kw">export async function</span> <span class="fn">GET</span>() {
+  <span class="kw">return</span> <span class="ty">Response</span>.<span class="fn">json</span>(<span class="fn">getAllSubjects</span>())
+}
+
+<span class="hl"><span class="cm">// POST /api/subjects — 科目を1件登録する</span>
+<span class="kw">export async function</span> <span class="fn">POST</span>(request: <span class="ty">Request</span>) {
+  <span class="kw">let</span> body: <span class="ty">unknown</span>
+  <span class="kw">try</span> {
+    body = <span class="kw">await</span> request.<span class="fn">json</span>()
+  } <span class="kw">catch</span> {
+    <span class="kw">return</span> <span class="ty">Response</span>.<span class="fn">json</span>(
+      { code: <span class="st">'BAD_REQUEST'</span>, message: <span class="st">'リクエストボディが不正です'</span> },
+      { status: <span class="nu">400</span> },
+    )
+  }
+  <span class="kw">const</span> result = subjectSchema.<span class="fn">safeParse</span>(body)
+  <span class="kw">if</span> (!result.success) {
+    <span class="kw">return</span> <span class="ty">Response</span>.<span class="fn">json</span>(
+      { code: <span class="st">'VALIDATION_ERROR'</span>, message: result.error.issues[<span class="nu">0</span>].message },
+      { status: <span class="nu">400</span> },
+    )
+  }
+  <span class="kw">const</span> { name } = result.data
+
+  <span class="kw">if</span> (<span class="fn">isNameDuplicate</span>(name)) {
+    <span class="kw">return</span> <span class="ty">Response</span>.<span class="fn">json</span>(
+      { code: <span class="st">'CONFLICT'</span>, message: <span class="st">'同じ名前の科目がすでに存在します'</span> },
+      { status: <span class="nu">409</span> },
+    )
+  }
+
+  <span class="kw">const</span> subject = <span class="fn">createSubject</span>(name)
+  <span class="kw">return</span> <span class="ty">Response</span>.<span class="fn">json</span>(subject, { status: <span class="nu">201</span> })
+}</span></code></pre>
+    </div>
+
+    <h3 id="step3-getput">③ GET / PUT — [id]/route.ts</h3>
+    <p>
+      既存の <code>DELETE</code> はそのままに、編集画面の初期値取得に使う <code>GET</code> と
+      更新処理の <code>PUT</code> を追記します。<code>params</code> は Next.js 15 以降で
+      <code>Promise</code> になるので <code>await</code> が必要です。
+    </p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <div class="code-dots"><span class="code-dot r"></span><span class="code-dot y"></span><span class="code-dot g"></span></div>
+        <span class="code-filename">app/api/subjects/[id]/route.ts</span>
+        <span class="code-lang">typescript</span>
+      </div>
+      <pre><code><span class="kw">import</span> {
+  <span class="fn">getSubjectById</span>,
+  <span class="fn">deleteSubjectById</span>,
+  <span class="fn">updateSubjectById</span>,
+  <span class="fn">isNameDuplicate</span>,
+} <span class="kw">from</span> <span class="st">'@/lib/subjects/mockStore'</span>
+<span class="kw">import</span> { subjectSchema } <span class="kw">from</span> <span class="st">'@/lib/subjects/schema'</span>
+
+<span class="hl"><span class="cm">// GET /api/subjects/[id] — 1件取得（編集画面の初期値に使う）</span>
+<span class="kw">export async function</span> <span class="fn">GET</span>(_req: <span class="ty">Request</span>, { params }: { params: <span class="ty">Promise</span>&lt;{ id: <span class="ty">string</span> }&gt; }) {
+  <span class="kw">const</span> { id } = <span class="kw">await</span> params
+  <span class="kw">const</span> subject = <span class="fn">getSubjectById</span>(id)
+  <span class="kw">if</span> (!subject) {
+    <span class="kw">return</span> <span class="ty">Response</span>.<span class="fn">json</span>(
+      { code: <span class="st">'NOT_FOUND'</span>, message: <span class="st">'指定した科目が存在しません'</span> },
+      { status: <span class="nu">404</span> },
+    )
+  }
+  <span class="kw">return</span> <span class="ty">Response</span>.<span class="fn">json</span>(subject)
+}
+
+<span class="cm">// PUT /api/subjects/[id] — 科目名を更新する</span>
+<span class="kw">export async function</span> <span class="fn">PUT</span>(request: <span class="ty">Request</span>, { params }: { params: <span class="ty">Promise</span>&lt;{ id: <span class="ty">string</span> }&gt; }) {
+  <span class="kw">const</span> { id } = <span class="kw">await</span> params
+
+  <span class="kw">if</span> (!<span class="fn">getSubjectById</span>(id)) {
+    <span class="kw">return</span> <span class="ty">Response</span>.<span class="fn">json</span>(
+      { code: <span class="st">'NOT_FOUND'</span>, message: <span class="st">'指定した科目が存在しません'</span> },
+      { status: <span class="nu">404</span> },
+    )
+  }
+
+  <span class="kw">let</span> body: <span class="ty">unknown</span>
+  <span class="kw">try</span> {
+    body = <span class="kw">await</span> request.<span class="fn">json</span>()
+  } <span class="kw">catch</span> {
+    <span class="kw">return</span> <span class="ty">Response</span>.<span class="fn">json</span>(
+      { code: <span class="st">'BAD_REQUEST'</span>, message: <span class="st">'リクエストボディが不正です'</span> },
+      { status: <span class="nu">400</span> },
+    )
+  }
+  <span class="kw">const</span> result = subjectSchema.<span class="fn">safeParse</span>(body)
+  <span class="kw">if</span> (!result.success) {
+    <span class="kw">return</span> <span class="ty">Response</span>.<span class="fn">json</span>(
+      { code: <span class="st">'VALIDATION_ERROR'</span>, message: result.error.issues[<span class="nu">0</span>].message },
+      { status: <span class="nu">400</span> },
+    )
+  }
+  <span class="kw">const</span> { name } = result.data
+
+  <span class="kw">if</span> (<span class="fn">isNameDuplicate</span>(name, id)) {
+    <span class="kw">return</span> <span class="ty">Response</span>.<span class="fn">json</span>(
+      { code: <span class="st">'CONFLICT'</span>, message: <span class="st">'同じ名前の科目がすでに存在します'</span> },
+      { status: <span class="nu">409</span> },
+    )
+  }
+
+  <span class="kw">const</span> updated = <span class="fn">updateSubjectById</span>(id, name)
+  <span class="kw">if</span> (!updated) {
+    <span class="kw">return</span> <span class="ty">Response</span>.<span class="fn">json</span>(
+      { code: <span class="st">'NOT_FOUND'</span>, message: <span class="st">'指定した科目が存在しません'</span> },
+      { status: <span class="nu">404</span> },
+    )
+  }
+  <span class="kw">return</span> <span class="ty">Response</span>.<span class="fn">json</span>(updated)
+}</span>
+
+<span class="cm">// DELETE /api/subjects/[id] — 科目を1件削除する</span>
+<span class="kw">export async function</span> <span class="fn">DELETE</span>(
+  _request: <span class="ty">Request</span>,
+  { params }: { params: <span class="ty">Promise</span>&lt;{ id: <span class="ty">string</span> }&gt; },
+) {
+  <span class="kw">const</span> { id } = <span class="kw">await</span> params
+  <span class="kw">const</span> deleted = <span class="fn">deleteSubjectById</span>(id)
+  <span class="kw">if</span> (!deleted) {
+    <span class="kw">return</span> <span class="ty">Response</span>.<span class="fn">json</span>(
+      { code: <span class="st">'NOT_FOUND'</span>, message: <span class="st">'指定した科目が存在しません'</span> },
+      { status: <span class="nu">404</span> },
+    )
+  }
+  <span class="kw">return new</span> <span class="ty">Response</span>(<span class="kw">null</span>, { status: <span class="nu">204</span> })
+}</code></pre>
+    </div>
+
+    <div class="callout tip">
+      <span class="callout-icon">💡</span>
+      <div class="callout-body">
+        <span class="callout-title">isNameDuplicate の第2引数について</span>
+        PUT のとき <code>isNameDuplicate(name, id)</code> と <strong>自分の ID を渡しています</strong>。
+        これにより「Spring Boot という名前の科目を Spring Boot のまま保存する」（自己重複）が
+        エラーにならないようにしています。
+      </div>
+    </div>
+  </section>
+  <div class="divider"></div>
+
+  <!-- ── STEP 4 ── -->
+  <section class="section" id="step4">
+    <div class="step-header">
+      <span class="step-num">Step 4</span>
+      <h2>API クライアント拡張 <span class="badge new">新規 / 修正</span></h2>
+    </div>
+    <p class="section-desc">
+      HTTP エラー処理を担う <code>ApiError</code> クラスと <code>parseErrorBody</code> ヘルパーを
+      共有モジュールに切り出します。続けて <code>subjects.ts</code> の全関数がこのヘルパーを使うように更新します。
+    </p>
+
+    <h3 id="step4-utils">① utils.ts 作成 — lib/api/utils.ts <span class="badge new">新規</span></h3>
+    <p>
+      通常の <code>Error</code> クラスは「何かが失敗した」という情報しか持ちません。
+      しかし「409 Conflict（重複）」と「500 Server Error」では、フォーム側の処理が異なります。
+      <code>ApiError</code> は <code>status</code> フィールドで HTTP ステータスを持てるようにした
+      カスタムエラークラスです。
+    </p>
+    <p>
+      <code>parseErrorBody</code> はエラーレスポンスの JSON ボディを読み取って
+      <code>ApiError</code> を <code>throw</code> するヘルパーです。
+      戻り値型が <code>Promise&lt;never&gt;</code> なので、呼び出し元の関数の型推論が正しく働きます。
+    </p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <div class="code-dots"><span class="code-dot r"></span><span class="code-dot y"></span><span class="code-dot g"></span></div>
+        <span class="code-filename">lib/api/utils.ts</span>
+        <span class="code-lang">typescript</span>
+      </div>
+      <pre><code><span class="cm">// HTTP エラーをステータスコード付きで表現するカスタムエラークラス</span>
+<span class="kw">export class</span> <span class="ty">ApiError</span> <span class="kw">extends</span> <span class="ty">Error</span> {
+  <span class="kw">constructor</span>(
+    <span class="kw">readonly</span> status: <span class="ty">number</span>,
+    message: <span class="ty">string</span>,
+  ) {
+    <span class="kw">super</span>(message)
+    <span class="kw">this</span>.name = <span class="st">'ApiError'</span>
+  }
+}
+
+<span class="cm">// エラーレスポンスの body を読み取り ApiError を throw する。
+// 戻り値型が Promise&lt;never&gt; なので、呼び出し元の返り値型を汚さない。</span>
+<span class="kw">export async function</span> <span class="fn">parseErrorBody</span>(res: <span class="ty">Response</span>): <span class="ty">Promise</span>&lt;<span class="kw">never</span>&gt; {
+  <span class="kw">const</span> body = <span class="kw">await</span> res.<span class="fn">json</span>().<span class="fn">catch</span>(() => <span class="kw">null</span>)
+  <span class="kw">throw new</span> <span class="ty">ApiError</span>(res.status, body?.message ?? <span class="st">`エラー (${res.status})`</span>)
+}</code></pre>
+    </div>
+
+    <div class="callout tip">
+      <span class="callout-icon">💡</span>
+      <div class="callout-body">
+        <span class="callout-title">Promise&lt;never&gt; とは？</span>
+        <code>never</code> は「絶対に値を返さない」ことを表す型です。
+        <code>parseErrorBody</code> は必ず <code>throw</code> するので <code>never</code> が適切です。
+        これにより呼び出し側で <code>return await parseErrorBody(res)</code> と書いても、
+        TypeScript は正常系の返り値型（<code>Subject[]</code> など）を維持できます。
+      </div>
+    </div>
+
+    <h3 id="step4-subjects">② subjects.ts 更新 — lib/api/subjects.ts <span class="badge mod">修正</span></h3>
+    <p>
+      <code>ApiError</code> クラスの定義を削除し（<code>utils.ts</code> に移動）、
+      各関数のエラーハンドリングを <code>parseErrorBody</code> に統一します。
+      5関数すべてで同じ <code>if (!res.ok) { return await parseErrorBody(res) }</code>
+      パターンを使います。
+    </p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <div class="code-dots"><span class="code-dot r"></span><span class="code-dot y"></span><span class="code-dot g"></span></div>
+        <span class="code-filename">lib/api/subjects.ts</span>
+        <span class="code-lang">typescript</span>
+      </div>
+      <pre><code><span class="kw">import type</span> { <span class="ty">Subject</span> } <span class="kw">from</span> <span class="st">'@/types/subject'</span>
+<span class="hl"><span class="kw">import</span> { <span class="fn">parseErrorBody</span> } <span class="kw">from</span> <span class="st">'@/lib/api/utils'</span></span>
+
+<span class="cm">// Phase 1: 同一オリジンの Next.js Route Handler（モック）を叩く。
+// Phase 2: `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/subjects` に変え、JWT を付ける。</span>
+<span class="kw">const</span> BASE = <span class="st">'/api/subjects'</span>
+
+<span class="cm">// 科目一覧を取得する</span>
+<span class="kw">export async function</span> <span class="fn">fetchSubjects</span>(signal?: <span class="ty">AbortSignal</span>): <span class="ty">Promise</span>&lt;<span class="ty">Subject</span>[]&gt; {
+  <span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(BASE, { cache: <span class="st">'no-store'</span>, signal })
+  <span class="kw">if</span> (!res.ok) {
+    <span class="kw">return await</span> <span class="fn">parseErrorBody</span>(res)
+  }
+  <span class="kw">return</span> res.<span class="fn">json</span>() <span class="kw">as</span> <span class="ty">Promise</span>&lt;<span class="ty">Subject</span>[]&gt;
+}
+
+<span class="cm">// 科目を1件取得する（編集画面の初期値に使う）</span>
+<span class="kw">export async function</span> <span class="fn">fetchSubjectById</span>(id: <span class="ty">string</span>, signal?: <span class="ty">AbortSignal</span>): <span class="ty">Promise</span>&lt;<span class="ty">Subject</span>&gt; {
+  <span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="st">`${BASE}/${id}`</span>, { cache: <span class="st">'no-store'</span>, signal })
+  <span class="kw">if</span> (!res.ok) {
+    <span class="kw">return await</span> <span class="fn">parseErrorBody</span>(res)
+  }
+  <span class="kw">return</span> res.<span class="fn">json</span>() <span class="kw">as</span> <span class="ty">Promise</span>&lt;<span class="ty">Subject</span>&gt;
+}
+
+<span class="cm">// 科目を新規登録する</span>
+<span class="kw">export async function</span> <span class="fn">createSubject</span>(name: <span class="ty">string</span>): <span class="ty">Promise</span>&lt;<span class="ty">Subject</span>&gt; {
+  <span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(BASE, {
+    method: <span class="st">'POST'</span>,
+    headers: { <span class="st">'Content-Type'</span>: <span class="st">'application/json'</span> },
+    body: <span class="ty">JSON</span>.<span class="fn">stringify</span>({ name }),
+  })
+  <span class="kw">if</span> (!res.ok) {
+    <span class="kw">return await</span> <span class="fn">parseErrorBody</span>(res)
+  }
+  <span class="kw">return</span> res.<span class="fn">json</span>() <span class="kw">as</span> <span class="ty">Promise</span>&lt;<span class="ty">Subject</span>&gt;
+}
+
+<span class="cm">// 科目名を更新する</span>
+<span class="kw">export async function</span> <span class="fn">updateSubject</span>(id: <span class="ty">string</span>, name: <span class="ty">string</span>): <span class="ty">Promise</span>&lt;<span class="ty">Subject</span>&gt; {
+  <span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="st">`${BASE}/${id}`</span>, {
+    method: <span class="st">'PUT'</span>,
+    headers: { <span class="st">'Content-Type'</span>: <span class="st">'application/json'</span> },
+    body: <span class="ty">JSON</span>.<span class="fn">stringify</span>({ name }),
+  })
+  <span class="kw">if</span> (!res.ok) {
+    <span class="kw">return await</span> <span class="fn">parseErrorBody</span>(res)
+  }
+  <span class="kw">return</span> res.<span class="fn">json</span>() <span class="kw">as</span> <span class="ty">Promise</span>&lt;<span class="ty">Subject</span>&gt;
+}
+
+<span class="cm">// 科目を1件削除する</span>
+<span class="kw">export async function</span> <span class="fn">deleteSubject</span>(id: <span class="ty">string</span>, signal?: <span class="ty">AbortSignal</span>): <span class="ty">Promise</span>&lt;<span class="ty">void</span>&gt; {
+  <span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="st">`${BASE}/${id}`</span>, { method: <span class="st">'DELETE'</span>, signal })
+  <span class="kw">if</span> (!res.ok) {
+    <span class="kw">return await</span> <span class="fn">parseErrorBody</span>(res)
+  }
+}</code></pre>
+    </div>
+
+    <div class="callout tip">
+      <span class="callout-icon">💡</span>
+      <div class="callout-body">
+        <span class="callout-title">.catch(() =&gt; null) の理由</span>
+        エラー時のレスポンスボディが JSON でない場合（例: 500 でサーバーが HTML を返す）でも
+        クラッシュしないようにする防御的な書き方です。
+        <code>??</code>（Null 合体演算子）で <code>'エラー (ステータスコード)'</code> にフォールバックしています。
+      </div>
+    </div>
+  </section>
+  <div class="divider"></div>
+
+  <!-- ── STEP 5 ── -->
+  <section class="section" id="step5">
+    <div class="step-header">
+      <span class="step-num">Step 5</span>
+      <h2>SubjectForm コンポーネント実装 <span class="badge new">新規</span></h2>
+    </div>
+    <p class="section-desc">
+      新規登録と編集で共用するフォームコンポーネントです。<code>mode</code> プロップで
+      動作を切り替えます。フォームの心臓部になるファイルなので、丁寧に読み進めてください。
+    </p>
+
+    <h3 id="step5-zod">① Zod スキーマの利用</h3>
+    <p>
+      Step 3 で作成した <code>lib/subjects/schema.ts</code> をインポートするだけです。
+      フォーム側でスキーマを再定義する必要はありません。
+    </p>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>ルール</th><th>Zod の書き方</th><th>エラーメッセージ</th></tr></thead>
+        <tbody>
+          <tr><td>前後空白の除去</td><td><code>.trim()</code></td><td>（スキーマ側で処理）</td></tr>
+          <tr><td>必須（空文字NG）</td><td><code>.min(1, 'メッセージ')</code></td><td>科目名を入力してください</td></tr>
+          <tr><td>50文字以内</td><td><code>.max(50, 'メッセージ')</code></td><td>科目名は50文字以内で入力してください</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 id="step5-submit">② 送信処理の流れ</h3>
+    <p>「保存」ボタンを押したときの処理を段階的に確認しましょう。</p>
+    <ol>
+      <li><code>e.preventDefault()</code> でページのリロードを防ぐ</li>
+      <li>Zod の <code>safeParse()</code> で入力値を検証する（<code>.trim()</code> も自動適用）</li>
+      <li>検証 NG → <code>fieldError</code> をセットして処理を止める</li>
+      <li>検証 OK → <code>result.data.name</code>（trim 済み）で <code>createSubject</code> または <code>updateSubject</code> を呼ぶ</li>
+      <li>成功 → トーストを表示して <code>/subjects</code> へ遷移</li>
+      <li>409 エラー → <code>apiError</code> をセットしてフォームに表示</li>
+      <li>その他のエラー → エラートーストを表示</li>
+    </ol>
+
+    <h3 id="step5-edit">③ 編集モード（初期値の取得）</h3>
+    <p>
+      <code>mode === 'edit'</code> かつ <code>subjectId</code> がある場合だけ、
+      <code>useEffect</code> でマウント直後に既存データを取得して <code>name</code> の状態にセットします。
+      <code>AbortController</code> を渡すことでコンポーネントのアンマウント時にリクエストをキャンセルできます。
+    </p>
+    <p>
+      <code>initialLoading</code> の初期値は <code>mode === 'edit' &amp;&amp; !!subjectId</code> にします。
+      これにより <code>subjectId</code> なしで edit モードが渡された場合に「読み込み中...」が
+      永遠に表示されるバグを防げます。
+    </p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <div class="code-dots"><span class="code-dot r"></span><span class="code-dot y"></span><span class="code-dot g"></span></div>
+        <span class="code-filename">app/(protected)/subjects/_components/SubjectForm.tsx</span>
+        <span class="code-lang">tsx</span>
+      </div>
+      <pre><code><span class="st">'use client'</span>
+
+<span class="kw">import</span> { <span class="fn">useEffect</span>, <span class="fn">useState</span> } <span class="kw">from</span> <span class="st">'react'</span>
+<span class="kw">import</span> { <span class="fn">useRouter</span> } <span class="kw">from</span> <span class="st">'next/navigation'</span>
+
+<span class="kw">import</span> { <span class="fn">useToast</span> } <span class="kw">from</span> <span class="st">'@/app/(protected)/_components/ToastContext'</span>
+<span class="kw">import</span> { subjectSchema } <span class="kw">from</span> <span class="st">'@/lib/subjects/schema'</span>
+<span class="kw">import</span> {
+  <span class="fn">createSubject</span>,
+  <span class="fn">updateSubject</span>,
+  <span class="fn">fetchSubjectById</span>,
+} <span class="kw">from</span> <span class="st">'@/lib/api/subjects'</span>
+<span class="kw">import</span> { <span class="ty">ApiError</span> } <span class="kw">from</span> <span class="st">'@/lib/api/utils'</span>
+
+<span class="kw">type</span> <span class="ty">Props</span> = {
+  mode:       <span class="st">'new'</span> | <span class="st">'edit'</span>
+  subjectId?: <span class="ty">string</span>  <span class="cm">// edit モード時に必須</span>
+}
+
+<span class="kw">export default function</span> <span class="fn">SubjectForm</span>({ mode, subjectId }: <span class="ty">Props</span>) {
+  <span class="kw">const</span> router       = <span class="fn">useRouter</span>()
+  <span class="kw">const</span> { addToast } = <span class="fn">useToast</span>()
+
+  <span class="cm">// フォーム入力値</span>
+  <span class="kw">const</span> [name, setName] = <span class="fn">useState</span>(<span class="st">''</span>)
+  <span class="cm">// Zod バリデーションエラー（フィールド単位）</span>
+  <span class="kw">const</span> [fieldError, setFieldError] = <span class="fn">useState</span>&lt;<span class="ty">string</span> | <span class="kw">null</span>&gt;(<span class="kw">null</span>)
+  <span class="cm">// API エラー（409 重複など）</span>
+  <span class="kw">const</span> [apiError, setApiError] = <span class="fn">useState</span>&lt;<span class="ty">string</span> | <span class="kw">null</span>&gt;(<span class="kw">null</span>)
+  <span class="cm">// 送信中フラグ（ボタン二重押し防止）</span>
+  <span class="kw">const</span> [submitting, setSubmitting] = <span class="fn">useState</span>(<span class="kw">false</span>)
+  <span class="hl">  <span class="cm">// subjectId がない場合は初期ロード不要なので false にする</span>
+  <span class="kw">const</span> [initialLoading, setInitialLoading] = <span class="fn">useState</span>(mode === <span class="st">'edit'</span> &amp;&amp; !!subjectId)</span>
+  <span class="cm">// 初期データ取得エラー</span>
+  <span class="kw">const</span> [loadError, setLoadError] = <span class="fn">useState</span>&lt;<span class="ty">string</span> | <span class="kw">null</span>&gt;(<span class="kw">null</span>)
+
+  <span class="cm">// 編集モード: マウント時に既存データを取得して name にセットする</span>
+  <span class="fn">useEffect</span>(() => {
+    <span class="kw">if</span> (mode !== <span class="st">'edit'</span> || !subjectId) <span class="kw">return</span>
+    <span class="kw">const</span> controller = <span class="kw">new</span> <span class="ty">AbortController</span>()
+    <span class="fn">fetchSubjectById</span>(subjectId, controller.signal)
+      .<span class="fn">then</span>((subject) => <span class="fn">setName</span>(subject.name))
+      .<span class="fn">catch</span>((e) => {
+        <span class="kw">if</span> (e <span class="kw">instanceof</span> <span class="ty">Error</span> &amp;&amp; e.name === <span class="st">'AbortError'</span>) <span class="kw">return</span>
+        <span class="fn">setLoadError</span>(e <span class="kw">instanceof</span> <span class="ty">Error</span> ? e.message : <span class="st">'読み込みに失敗しました'</span>)
+      })
+      .<span class="fn">finally</span>(() => <span class="fn">setInitialLoading</span>(<span class="kw">false</span>))
+    <span class="kw">return</span> () => controller.<span class="fn">abort</span>()
+  }, [mode, subjectId])
+
+  <span class="kw">const</span> <span class="fn">handleSubmit</span> = <span class="kw">async</span> (e: <span class="ty">React.SubmitEvent</span>) => {
+    e.<span class="fn">preventDefault</span>()
+    <span class="cm">// 前回の送信で表示されたエラーメッセージを消去する</span>
+    <span class="fn">setFieldError</span>(<span class="kw">null</span>)
+    <span class="fn">setApiError</span>(<span class="kw">null</span>)
+
+    <span class="cm">// Zod でバリデーション（safeParse は例外を投げず結果オブジェクトを返す）</span>
+    <span class="kw">const</span> result = subjectSchema.<span class="fn">safeParse</span>({ name })
+    <span class="kw">if</span> (!result.success) {
+      <span class="fn">setFieldError</span>(result.error.issues[<span class="nu">0</span>].message)
+      <span class="kw">return</span>
+    }
+
+    <span class="fn">setSubmitting</span>(<span class="kw">true</span>)
+    <span class="kw">try</span> {
+      <span class="kw">if</span> (mode === <span class="st">'new'</span>) {
+        <span class="kw">await</span> <span class="fn">createSubject</span>(result.data.name)
+        <span class="fn">addToast</span>(<span class="st">'科目を登録しました'</span>, <span class="st">'success'</span>)
+      } <span class="kw">else</span> {
+        <span class="kw">await</span> <span class="fn">updateSubject</span>(subjectId!, result.data.name)
+        <span class="fn">addToast</span>(<span class="st">'科目を更新しました'</span>, <span class="st">'success'</span>)
+      }
+      router.<span class="fn">push</span>(<span class="st">'/subjects'</span>)
+    } <span class="kw">catch</span> (e) {
+      <span class="kw">if</span> (e <span class="kw">instanceof</span> <span class="ty">ApiError</span> &amp;&amp; e.status === <span class="nu">409</span>) {
+        <span class="cm">// 重複エラーはフォーム上に表示（トーストではなく）</span>
+        <span class="fn">setApiError</span>(e.message)
+      } <span class="kw">else</span> {
+        <span class="fn">addToast</span>(e <span class="kw">instanceof</span> <span class="ty">Error</span> ? e.message : <span class="st">'操作に失敗しました'</span>, <span class="st">'error'</span>)
+      }
+    } <span class="kw">finally</span> {
+      <span class="fn">setSubmitting</span>(<span class="kw">false</span>)
+    }
+  }
+
+  <span class="cm">// 編集モードで初期データ取得中 / 取得失敗のとき</span>
+  <span class="kw">if</span> (initialLoading) <span class="kw">return</span> &lt;<span class="ty">p</span> className=<span class="st">"text-gray-500"</span>&gt;読み込み中...&lt;/<span class="ty">p</span>&gt;
+  <span class="kw">if</span> (loadError) <span class="kw">return</span> (
+    &lt;<span class="ty">div</span>&gt;
+      &lt;<span class="ty">p</span> className=<span class="st">"text-red-500"</span>&gt;{loadError}&lt;/<span class="ty">p</span>&gt;
+      &lt;<span class="ty">button</span>
+        type=<span class="st">"button"</span>
+        onClick={() =&gt; router.<span class="fn">push</span>(<span class="st">'/subjects'</span>)}
+        className=<span class="st">"rounded-md border border-gray-300 px-4 py-2 text-sm
+          text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"</span>
+      &gt;
+        一覧に戻る
+      &lt;/<span class="ty">button</span>&gt;
+    &lt;/<span class="ty">div</span>&gt;
+  )
+
+  <span class="kw">return</span> (
+    &lt;<span class="ty">form</span> onSubmit={handleSubmit} noValidate className=<span class="st">"space-y-6"</span>&gt;
+      &lt;<span class="ty">div</span>&gt;
+        &lt;<span class="ty">label</span>
+          htmlFor=<span class="st">"name"</span>
+          className=<span class="st">"block text-sm font-medium text-gray-700 mb-1"</span>
+        &gt;
+          科目名 &lt;<span class="ty">span</span> className=<span class="st">"text-red-500"</span>&gt;*&lt;/<span class="ty">span</span>&gt;
+        &lt;/<span class="ty">label</span>&gt;
+        &lt;<span class="ty">input</span>
+          id=<span class="st">"name"</span>
+          type=<span class="st">"text"</span>
+          value={name}
+          required
+          aria-required=<span class="st">"true"</span>
+          onChange={(e) =&gt; <span class="fn">setName</span>(e.target.value)}
+          aria-describedby={fieldError || apiError ? <span class="st">'name-error'</span> : <span class="kw">undefined</span>}
+          aria-invalid={!!(fieldError || apiError)}
+          className={<span class="st">`w-full rounded-md border px-3 py-2 text-sm
+            focus:outline-none focus:ring-2 focus:ring-indigo-500
+            ${fieldError || apiError ? 'border-red-400' : 'border-gray-300'}`</span>}
+        /&gt;
+        {(fieldError || apiError) &amp;&amp; (
+          &lt;<span class="ty">p</span> id=<span class="st">"name-error"</span> role=<span class="st">"alert"</span> className=<span class="st">"mt-1 text-sm text-red-600"</span>&gt;
+            {fieldError ?? apiError}
+          &lt;/<span class="ty">p</span>&gt;
+        )}
+      &lt;/<span class="ty">div</span>&gt;
+
+      &lt;<span class="ty">div</span> className=<span class="st">"flex justify-end gap-3"</span>&gt;
+        &lt;<span class="ty">button</span>
+          type=<span class="st">"button"</span>
+          onClick={() =&gt; router.<span class="fn">push</span>(<span class="st">'/subjects'</span>)}
+          className=<span class="st">"rounded-md border border-gray-300 px-4 py-2 text-sm
+            text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"</span>
+        &gt;
+          キャンセル
+        &lt;/<span class="ty">button</span>&gt;
+        &lt;<span class="ty">button</span>
+          type=<span class="st">"submit"</span>
+          disabled={submitting}
+          className=<span class="st">"rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold
+            text-white hover:bg-indigo-700 transition-colors
+            disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"</span>
+        &gt;
+          {submitting ? <span class="st">'保存中'</span> : <span class="st">'保存'</span>}
+        &lt;/<span class="ty">button</span>&gt;
+      &lt;/<span class="ty">div</span>&gt;
+    &lt;/<span class="ty">form</span>&gt;
+  )
+}</code></pre>
+    </div>
+
+    <div class="callout ok">
+      <span class="callout-icon">✅</span>
+      <div class="callout-body">
+        <span class="callout-title">noValidate の意味</span>
+        <code>&lt;form noValidate&gt;</code> はブラウザ組み込みのバリデーションポップアップを
+        <strong>無効化</strong>するための属性です。独自の Zod バリデーションとスタイルを
+        表示するので、ブラウザのデフォルト動作と干渉しないようにしています。
+      </div>
+    </div>
+  </section>
+  <div class="divider"></div>
+
+  <!-- ── STEP 6 ── -->
+  <section class="section" id="step6">
+    <div class="step-header">
+      <span class="step-num">Step 6</span>
+      <h2>ページコンポーネント実装 <span class="badge mod">修正</span></h2>
+    </div>
+    <p class="section-desc">
+      現在は「準備中」と表示されているだけのページを、<code>SubjectForm</code> を使って完成させます。
+      ページ自体はシンプルに保ち、ロジックはすべて <code>SubjectForm</code> に委譲します。
+    </p>
+
+    <h3>新規登録ページ</h3>
+
+    <div class="code-block">
+      <div class="code-header">
+        <div class="code-dots"><span class="code-dot r"></span><span class="code-dot y"></span><span class="code-dot g"></span></div>
+        <span class="code-filename">app/(protected)/subjects/new/page.tsx</span>
+        <span class="code-lang">tsx</span>
+      </div>
+      <pre><code><span class="kw">import</span> <span class="ty">SubjectForm</span> <span class="kw">from</span> <span class="st">'../_components/SubjectForm'</span>
+
+<span class="kw">export default function</span> <span class="fn">NewSubjectPage</span>() {
+  <span class="kw">return</span> (
+    &lt;<span class="ty">div</span> className=<span class="st">"space-y-6"</span>&gt;
+      &lt;<span class="ty">h1</span> className=<span class="st">"text-xl font-bold text-gray-900"</span>&gt;科目登録&lt;/<span class="ty">h1</span>&gt;
+      &lt;<span class="ty">div</span> className=<span class="st">"rounded-lg border border-gray-200 bg-white p-6 shadow-sm"</span>&gt;
+        &lt;<span class="ty">SubjectForm</span> mode=<span class="st">"new"</span> /&gt;
+      &lt;/<span class="ty">div</span>&gt;
+    &lt;/<span class="ty">div</span>&gt;
+  )
+}</code></pre>
+    </div>
+
+    <h3>編集ページ</h3>
+    <p>
+      URL パラメーター <code>[id]</code> を <code>params</code> から取得して
+      <code>SubjectForm</code> に渡します。Next.js 15 以降では <code>params</code> は
+      <code>Promise</code> になっているので <code>await</code> が必要です。
+    </p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <div class="code-dots"><span class="code-dot r"></span><span class="code-dot y"></span><span class="code-dot g"></span></div>
+        <span class="code-filename">app/(protected)/subjects/[id]/edit/page.tsx</span>
+        <span class="code-lang">tsx</span>
+      </div>
+      <pre><code><span class="kw">import</span> <span class="ty">SubjectForm</span> <span class="kw">from</span> <span class="st">'../../_components/SubjectForm'</span>
+
+<span class="kw">export default async function</span> <span class="fn">EditSubjectPage</span>({
+  params,
+}: {
+  params: <span class="ty">Promise</span>&lt;{ id: <span class="ty">string</span> }&gt;
+}) {
+  <span class="kw">const</span> { id } = <span class="kw">await</span> params
+
+  <span class="kw">return</span> (
+    &lt;<span class="ty">div</span> className=<span class="st">"space-y-6"</span>&gt;
+      &lt;<span class="ty">h1</span> className=<span class="st">"text-xl font-bold text-gray-900"</span>&gt;科目編集&lt;/<span class="ty">h1</span>&gt;
+      &lt;<span class="ty">div</span> className=<span class="st">"rounded-lg border border-gray-200 bg-white p-6 shadow-sm"</span>&gt;
+        &lt;<span class="ty">SubjectForm</span> mode=<span class="st">"edit"</span> subjectId={id} /&gt;
+      &lt;/<span class="ty">div</span>&gt;
+    &lt;/<span class="ty">div</span>&gt;
+  )
+}</code></pre>
+    </div>
+  </section>
+  <div class="divider"></div>
+
+  <!-- ── STEP 7 ── -->
+  <section class="section" id="step7">
+    <div class="step-header">
+      <span class="step-num">Step 7</span>
+      <h2>単体テスト実装 <span class="badge test">テスト</span></h2>
+    </div>
+    <p class="section-desc">
+      <code>SubjectForm</code> の動作をコードで自動検証します。
+      Issue #10 の <code>SubjectList.test.tsx</code> と同じパターンで書きます。
+    </p>
+
+    <div class="callout info">
+      <span class="callout-icon">ℹ️</span>
+      <div class="callout-body">
+        <span class="callout-title">ApiError をどこからインポートするか</span>
+        <code>ApiError</code> は <code>lib/api/utils.ts</code> に移動したので、
+        テストも同じパスからインポートします。
+        <code>jest.mock('@/lib/api/subjects', ...)</code> の spread で広がるのはAPI関数のみで、
+        <code>ApiError</code> は含まれません。テスト内で <code>instanceof ApiError</code> が
+        正しく動くよう、<code>utils.ts</code> から直接インポートした本物のクラスを使います。
+      </div>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header">
+        <div class="code-dots"><span class="code-dot r"></span><span class="code-dot y"></span><span class="code-dot g"></span></div>
+        <span class="code-filename">app/(protected)/subjects/_components/SubjectForm.test.tsx</span>
+        <span class="code-lang">tsx</span>
+      </div>
+      <pre><code><span class="kw">import</span> { <span class="fn">render</span>, <span class="fn">screen</span>, <span class="fn">waitFor</span> } <span class="kw">from</span> <span class="st">'@testing-library/react'</span>
+<span class="kw">import</span> userEvent <span class="kw">from</span> <span class="st">'@testing-library/user-event'</span>
+<span class="kw">import</span> { <span class="fn">useRouter</span> } <span class="kw">from</span> <span class="st">'next/navigation'</span>
+
+<span class="kw">import</span> { <span class="ty">ToastProvider</span> } <span class="kw">from</span> <span class="st">'@/app/(protected)/_components/ToastContext'</span>
+<span class="kw">import</span> <span class="ty">Toaster</span>           <span class="kw">from</span> <span class="st">'@/app/(protected)/_components/Toaster'</span>
+<span class="kw">import</span> <span class="ty">SubjectForm</span>       <span class="kw">from</span> <span class="st">'./SubjectForm'</span>
+<span class="kw">import</span> {
+  <span class="fn">createSubject</span>,
+  <span class="fn">updateSubject</span>,
+  <span class="fn">fetchSubjectById</span>,
+} <span class="kw">from</span> <span class="st">'@/lib/api/subjects'</span>
+<span class="hl"><span class="kw">import</span> { <span class="ty">ApiError</span> } <span class="kw">from</span> <span class="st">'@/lib/api/utils'</span>
+<span class="cm">// ↑ ApiError は utils.ts から直接インポートする（subjects.ts には存在しない）</span></span>
+
+<span class="cm">// next/navigation の useRouter をモック化する</span>
+jest.<span class="fn">mock</span>(<span class="st">'next/navigation'</span>, () => ({
+  <span class="fn">useRouter</span>: jest.<span class="fn">fn</span>(),
+}))
+
+<span class="cm">// API 関数だけモックにする。ApiError は本物のクラスを使う（instanceof が正しく動くように）</span>
+jest.<span class="fn">mock</span>(<span class="st">'@/lib/api/subjects'</span>, () => {
+  <span class="kw">const</span> actual = jest.<span class="fn">requireActual</span>(<span class="st">'@/lib/api/subjects'</span>)
+  <span class="kw">return</span> {
+    ...actual,
+    <span class="fn">createSubject</span>:    jest.<span class="fn">fn</span>(),
+    <span class="fn">updateSubject</span>:    jest.<span class="fn">fn</span>(),
+    <span class="fn">fetchSubjectById</span>: jest.<span class="fn">fn</span>(),
+  }
+})
+
+<span class="kw">const</span> mockPush      = jest.<span class="fn">fn</span>()
+<span class="kw">const</span> mockCreate    = jest.<span class="fn">mocked</span>(createSubject)
+<span class="kw">const</span> mockUpdate    = jest.<span class="fn">mocked</span>(updateSubject)
+<span class="kw">const</span> mockFetchById = jest.<span class="fn">mocked</span>(fetchSubjectById)
+
+<span class="kw">const</span> SAMPLE_SUBJECT = { id: <span class="st">'id-1'</span>, name: <span class="st">'Spring Boot'</span>, createdAt: <span class="st">'2026-01-10T00:00:00Z'</span> }
+
+<span class="fn">beforeEach</span>(() => {
+  jest.<span class="fn">clearAllMocks</span>()
+  ;(<span class="fn">useRouter</span> <span class="kw">as</span> jest.<span class="ty">Mock</span>).<span class="fn">mockReturnValue</span>({ push: mockPush })
+})
+
+<span class="kw">function</span> <span class="fn">renderWithProviders</span>(ui: <span class="ty">React.ReactElement</span>) {
+  <span class="kw">return</span> <span class="fn">render</span>(
+    &lt;<span class="ty">ToastProvider</span>&gt;
+      {ui}
+      &lt;<span class="ty">Toaster</span> /&gt;
+    &lt;/<span class="ty">ToastProvider</span>&gt;,
+  )
+}
+
+<span class="fn">describe</span>(<span class="st">'SubjectForm - 新規登録モード'</span>, () => {
+  <span class="fn">test</span>(<span class="st">'科目名を入力して保存すると createSubject が呼ばれ、/subjects へ遷移する'</span>, <span class="kw">async</span> () => {
+    mockCreate.<span class="fn">mockResolvedValue</span>(SAMPLE_SUBJECT)
+    <span class="kw">const</span> user = userEvent.<span class="fn">setup</span>()
+    <span class="fn">renderWithProviders</span>(&lt;<span class="ty">SubjectForm</span> mode=<span class="st">"new"</span> /&gt;)
+
+    <span class="kw">await</span> user.<span class="fn">type</span>(screen.<span class="fn">getByLabelText</span>(<span class="st">/科目名/</span>), <span class="st">'Spring Boot'</span>)
+    <span class="kw">await</span> user.<span class="fn">click</span>(screen.<span class="fn">getByRole</span>(<span class="st">'button'</span>, { name: <span class="st">'保存'</span> }))
+
+    <span class="kw">await</span> <span class="fn">waitFor</span>(() =>
+      expect(mockCreate).<span class="fn">toHaveBeenCalledWith</span>(<span class="st">'Spring Boot'</span>),
+    )
+    expect(<span class="kw">await</span> screen.<span class="fn">findByText</span>(<span class="st">'科目を登録しました'</span>)).<span class="fn">toBeInTheDocument</span>()
+    expect(mockPush).<span class="fn">toHaveBeenCalledWith</span>(<span class="st">'/subjects'</span>)
+  })
+
+  <span class="fn">test</span>(<span class="st">'科目名が空のまま保存するとバリデーションエラーが表示される'</span>, <span class="kw">async</span> () => {
+    <span class="kw">const</span> user = userEvent.<span class="fn">setup</span>()
+    <span class="fn">renderWithProviders</span>(&lt;<span class="ty">SubjectForm</span> mode=<span class="st">"new"</span> /&gt;)
+
+    <span class="kw">await</span> user.<span class="fn">click</span>(screen.<span class="fn">getByRole</span>(<span class="st">'button'</span>, { name: <span class="st">'保存'</span> }))
+
+    expect(<span class="kw">await</span> screen.<span class="fn">findByText</span>(<span class="st">'科目名を入力してください'</span>)).<span class="fn">toBeInTheDocument</span>()
+    expect(mockCreate).<span class="fn">not</span>.<span class="fn">toHaveBeenCalled</span>()
+  })
+
+  <span class="fn">test</span>(<span class="st">'51文字の科目名でバリデーションエラーが表示される'</span>, <span class="kw">async</span> () => {
+    <span class="kw">const</span> user = userEvent.<span class="fn">setup</span>()
+    <span class="fn">renderWithProviders</span>(&lt;<span class="ty">SubjectForm</span> mode=<span class="st">"new"</span> /&gt;)
+
+    <span class="kw">await</span> user.<span class="fn">type</span>(screen.<span class="fn">getByLabelText</span>(<span class="st">/科目名/</span>), <span class="st">'あ'</span>.<span class="fn">repeat</span>(<span class="nu">51</span>))
+    <span class="kw">await</span> user.<span class="fn">click</span>(screen.<span class="fn">getByRole</span>(<span class="st">'button'</span>, { name: <span class="st">'保存'</span> }))
+
+    expect(<span class="kw">await</span> screen.<span class="fn">findByText</span>(<span class="st">'科目名は50文字以内で入力してください'</span>)).<span class="fn">toBeInTheDocument</span>()
+    expect(mockCreate).<span class="fn">not</span>.<span class="fn">toHaveBeenCalled</span>()
+  })
+
+  <span class="fn">test</span>(<span class="st">'409 エラー時はフォーム上にエラーメッセージを表示する'</span>, <span class="kw">async</span> () => {
+    mockCreate.<span class="fn">mockRejectedValue</span>(<span class="kw">new</span> <span class="ty">ApiError</span>(<span class="nu">409</span>, <span class="st">'同じ名前の科目がすでに存在します'</span>))
+    <span class="kw">const</span> user = userEvent.<span class="fn">setup</span>()
+    <span class="fn">renderWithProviders</span>(&lt;<span class="ty">SubjectForm</span> mode=<span class="st">"new"</span> /&gt;)
+
+    <span class="kw">await</span> user.<span class="fn">type</span>(screen.<span class="fn">getByLabelText</span>(<span class="st">/科目名/</span>), <span class="st">'Spring Boot'</span>)
+    <span class="kw">await</span> user.<span class="fn">click</span>(screen.<span class="fn">getByRole</span>(<span class="st">'button'</span>, { name: <span class="st">'保存'</span> }))
+
+    expect(<span class="kw">await</span> screen.<span class="fn">findByText</span>(<span class="st">'同じ名前の科目がすでに存在します'</span>)).<span class="fn">toBeInTheDocument</span>()
+    expect(mockPush).<span class="fn">not</span>.<span class="fn">toHaveBeenCalled</span>()
+  })
+
+  <span class="fn">test</span>(<span class="st">'キャンセルボタンで /subjects へ遷移する'</span>, <span class="kw">async</span> () => {
+    <span class="kw">const</span> user = userEvent.<span class="fn">setup</span>()
+    <span class="fn">renderWithProviders</span>(&lt;<span class="ty">SubjectForm</span> mode=<span class="st">"new"</span> /&gt;)
+
+    <span class="kw">await</span> user.<span class="fn">click</span>(screen.<span class="fn">getByRole</span>(<span class="st">'button'</span>, { name: <span class="st">'キャンセル'</span> }))
+
+    expect(mockPush).<span class="fn">toHaveBeenCalledWith</span>(<span class="st">'/subjects'</span>)
+  })
+})
+
+<span class="fn">describe</span>(<span class="st">'SubjectForm - 編集モード'</span>, () => {
+  <span class="fn">test</span>(<span class="st">'既存の科目名が初期値として表示され、変更して保存すると updateSubject が呼ばれる'</span>, <span class="kw">async</span> () => {
+    mockFetchById.<span class="fn">mockResolvedValue</span>(SAMPLE_SUBJECT)
+    mockUpdate.<span class="fn">mockResolvedValue</span>({ ...SAMPLE_SUBJECT, name: <span class="st">'Spring WebFlux'</span> })
+    <span class="kw">const</span> user = userEvent.<span class="fn">setup</span>()
+    <span class="fn">renderWithProviders</span>(&lt;<span class="ty">SubjectForm</span> mode=<span class="st">"edit"</span> subjectId=<span class="st">"id-1"</span> /&gt;)
+
+    <span class="kw">const</span> input = <span class="kw">await</span> screen.<span class="fn">findByDisplayValue</span>(<span class="st">'Spring Boot'</span>)
+    <span class="kw">await</span> user.<span class="fn">clear</span>(input)
+    <span class="kw">await</span> user.<span class="fn">type</span>(input, <span class="st">'Spring WebFlux'</span>)
+    <span class="kw">await</span> user.<span class="fn">click</span>(screen.<span class="fn">getByRole</span>(<span class="st">'button'</span>, { name: <span class="st">'保存'</span> }))
+
+    <span class="kw">await</span> <span class="fn">waitFor</span>(() =>
+      expect(mockUpdate).<span class="fn">toHaveBeenCalledWith</span>(<span class="st">'id-1'</span>, <span class="st">'Spring WebFlux'</span>),
+    )
+    expect(<span class="kw">await</span> screen.<span class="fn">findByText</span>(<span class="st">'科目を更新しました'</span>)).<span class="fn">toBeInTheDocument</span>()
+    expect(mockPush).<span class="fn">toHaveBeenCalledWith</span>(<span class="st">'/subjects'</span>)
+  })
+
+  <span class="fn">test</span>(<span class="st">'初期データ取得失敗時にエラーメッセージを表示する'</span>, <span class="kw">async</span> () => {
+    <span class="hl">    mockFetchById.<span class="fn">mockRejectedValue</span>(<span class="kw">new</span> <span class="ty">ApiError</span>(<span class="nu">404</span>, <span class="st">'指定した科目が存在しません'</span>))</span>
+    <span class="fn">renderWithProviders</span>(&lt;<span class="ty">SubjectForm</span> mode=<span class="st">"edit"</span> subjectId=<span class="st">"id-999"</span> /&gt;)
+
+    expect(<span class="kw">await</span> screen.<span class="fn">findByText</span>(<span class="st">'指定した科目が存在しません'</span>)).<span class="fn">toBeInTheDocument</span>()
+  })
+})</code></pre>
+    </div>
+
+    <h4>テストを実行する</h4>
+    <div class="code-block">
+      <div class="code-header">
+        <div class="code-dots"><span class="code-dot r"></span><span class="code-dot y"></span><span class="code-dot g"></span></div>
+        <span class="code-filename">terminal</span>
+        <span class="code-lang">shell</span>
+      </div>
+      <pre><code><span class="cm"># frontend/ ディレクトリで実行</span>
+npm test -- --testPathPattern=SubjectForm</code></pre>
+    </div>
+
+    <p>7件のテストがすべて <span style="color:var(--green);font-weight:700">PASS</span> することを確認してください。</p>
+  </section>
+  <div class="divider"></div>
+
+  <!-- ── VERIFY ── -->
+  <section class="section" id="verify">
+    <div class="step-header">
+      <h2><span class="h2-num" style="background:var(--green)">✓</span>動作確認チェックリスト</h2>
+    </div>
+    <p class="section-desc"><code>npm run dev</code> でアプリを起動し、以下をブラウザで確認してください。</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>テスト ID</th>
+            <th>操作</th>
+            <th>期待する結果</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>E2E-SUB-FORM-01</code></td>
+            <td><code>/subjects/new</code> で科目名を入力して「保存」</td>
+            <td>一覧 (<code>/subjects</code>) に遷移し、「科目を登録しました」トーストが表示される</td>
+          </tr>
+          <tr>
+            <td><code>E2E-SUB-FORM-02</code></td>
+            <td>科目名を空のまま「保存」</td>
+            <td>「科目名を入力してください」がフォーム下に表示される（ページ遷移しない）</td>
+          </tr>
+          <tr>
+            <td><code>E2E-SUB-FORM-03</code></td>
+            <td>既存の科目名（例: Spring Boot）を入力して「保存」</td>
+            <td>「同じ名前の科目がすでに存在します」がフォーム下に表示される（ページ遷移しない）</td>
+          </tr>
+          <tr>
+            <td><code>E2E-SUB-FORM-04</code></td>
+            <td>一覧の「編集」ボタンをクリックして編集画面を開く</td>
+            <td>既存の科目名がインプットに初期値として表示される</td>
+          </tr>
+          <tr>
+            <td>—</td>
+            <td>編集画面で科目名を変更して「保存」</td>
+            <td>一覧に遷移し、「科目を更新しました」トーストが表示される</td>
+          </tr>
+          <tr>
+            <td>—</td>
+            <td>「キャンセル」ボタンをクリック</td>
+            <td><code>/subjects</code> に遷移する（データは変更されない）</td>
+          </tr>
+          <tr>
+            <td>—</td>
+            <td>51文字の科目名を入力して「保存」</td>
+            <td>「科目名は50文字以内で入力してください」が表示される</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout ok">
+      <span class="callout-icon">🎉</span>
+      <div class="callout-body">
+        <span class="callout-title">完了！</span>
+        すべての項目が確認できたら Issue #11 の実装は完了です。
+        PR を作成して、完了条件のチェックボックスを確認してレビューに出しましょう。
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  // TOC アクティブ状態
+  const links = document.querySelectorAll('.toc-link')
+  const sections = [...links].map(l => {
+    const id = l.getAttribute('href')?.slice(1)
+    return id ? document.getElementById(id) : null
+  })
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        links.forEach(l => l.classList.remove('active'))
+        const idx = sections.indexOf(entry.target)
+        if (idx >= 0) links[idx].classList.add('active')
+      }
+    })
+  }, { rootMargin: '-20% 0px -70% 0px' })
+  sections.forEach(s => s && observer.observe(s))
+
+  // 進捗バー（Step 1〜7 の各セクション）
+  const steps = ['step1','step2','step3','step4','step5','step6','step7']
+  const fill = document.getElementById('progress-fill')
+  const pct  = document.getElementById('progress-pct')
+  const stepObs = new IntersectionObserver(entries => {
+    let done = 0
+    entries.forEach(e => { if (e.isIntersecting) done++ })
+    const total = steps.length
+    const seen = steps.filter(id => {
+      const el = document.getElementById(id)
+      if (!el) return false
+      const rect = el.getBoundingClientRect()
+      return rect.top < window.innerHeight
+    }).length
+    if (fill) fill.style.width = (seen / total * 100) + '%'
+    if (pct)  pct.textContent = seen + ' / ' + total
+  }, { threshold: 0.1 })
+  steps.forEach(id => { const el = document.getElementById(id); if (el) stepObs.observe(el) })
+
+  document.addEventListener('scroll', () => {
+    const seen = steps.filter(id => {
+      const el = document.getElementById(id)
+      if (!el) return false
+      return el.getBoundingClientRect().top < window.innerHeight * 0.8
+    }).length
+    if (fill) fill.style.width = (seen / steps.length * 100) + '%'
+    if (pct)  pct.textContent = seen + ' / ' + steps.length
+  })
+</script>
+</body>
+</html>
