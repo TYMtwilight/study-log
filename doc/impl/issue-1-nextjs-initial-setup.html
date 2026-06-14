@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Next.js プロジェクト初期セットアップ 実装手順</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-size: 16px;
+      line-height: 1.7;
+      color: #24292f;
+      background: #ffffff;
+      margin: 0;
+      padding: 0;
+    }
+
+    .page {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 48px 32px 80px;
+    }
+
+    /* ---- Header ---- */
+    .doc-header {
+      border-bottom: 2px solid #d0d7de;
+      padding-bottom: 24px;
+      margin-bottom: 40px;
+    }
+
+    .doc-header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      margin: 0 0 12px;
+      color: #0d1117;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      font-size: 14px;
+      color: #57606a;
+    }
+
+    .meta a {
+      color: #0969da;
+      text-decoration: none;
+    }
+
+    .meta a:hover { text-decoration: underline; }
+
+    /* ---- Steps ---- */
+    .step {
+      margin-bottom: 56px;
+    }
+
+    .step-heading {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+
+    .step-badge {
+      flex-shrink: 0;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #0969da;
+      color: #fff;
+      font-size: 15px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .step-heading h2 {
+      font-size: 20px;
+      font-weight: 700;
+      margin: 0;
+      color: #0d1117;
+    }
+
+    .step-body { padding-left: 50px; }
+
+    p { margin: 0 0 12px; }
+
+    /* ---- Callout ---- */
+    .callout {
+      border-left: 4px solid #0969da;
+      background: #ddf4ff;
+      border-radius: 0 6px 6px 0;
+      padding: 12px 16px;
+      margin: 16px 0;
+      font-size: 14px;
+    }
+
+    .callout strong { color: #0550ae; }
+
+    /* ---- Code blocks ---- */
+    pre {
+      background: #f6f8fa;
+      border: 1px solid #d0d7de;
+      border-radius: 6px;
+      padding: 16px 20px;
+      overflow-x: auto;
+      font-size: 13.5px;
+      line-height: 1.6;
+      margin: 12px 0;
+    }
+
+    code {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    }
+
+    pre code { background: none; padding: 0; }
+
+    p code, li code {
+      background: #f0f2f5;
+      border: 1px solid #d0d7de;
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-size: 13.5px;
+    }
+
+    /* ---- Directory tree ---- */
+    .tree {
+      background: #f6f8fa;
+      border: 1px solid #d0d7de;
+      border-radius: 6px;
+      padding: 16px 20px;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 13.5px;
+      line-height: 1.8;
+      white-space: pre;
+      overflow-x: auto;
+    }
+
+    .tree .comment { color: #57606a; }
+
+    /* ---- Completion table ---- */
+    .checklist {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14.5px;
+      margin-top: 16px;
+    }
+
+    .checklist th,
+    .checklist td {
+      border: 1px solid #d0d7de;
+      padding: 10px 14px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .checklist thead th {
+      background: #f6f8fa;
+      font-weight: 600;
+      color: #0d1117;
+    }
+
+    .checklist tbody tr:nth-child(even) td { background: #f6f8fa; }
+
+    .checklist td:last-child {
+      white-space: nowrap;
+      color: #57606a;
+    }
+
+    /* ---- Divider ---- */
+    hr {
+      border: none;
+      border-top: 1px solid #d0d7de;
+      margin: 40px 0;
+    }
+
+    ul, ol { margin: 8px 0 12px; padding-left: 24px; }
+    li { margin-bottom: 4px; }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ====== Document Header ====== -->
+  <header class="doc-header">
+    <h1>Next.js プロジェクト初期セットアップ 実装手順</h1>
+    <div class="meta">
+      <span>対応 Issue:
+        <a href="https://github.com/TYMtwilight/study-log/issues/1">
+          #1 [セットアップ] Next.js プロジェクト初期セットアップ
+        </a>
+      </span>
+      <span>作成日: 2026年4月28日</span>
+    </div>
+  </header>
+
+  <!-- ====== Step 1 ====== -->
+  <section class="step">
+    <div class="step-heading">
+      <div class="step-badge">1</div>
+      <h2><code>create-next-app</code> でプロジェクト作成</h2>
+    </div>
+    <div class="step-body">
+      <pre><code>npx create-next-app@latest frontend \
+  --typescript \
+  --eslint \
+  --tailwind \
+  --app \
+  --no-src-dir \
+  --import-alias "@/*"</code></pre>
+      <p>
+        <code>--no-src-dir</code> を選ぶ理由: ディレクトリ構成が <code>app/</code> 直下になるためです（画面定義書 §2 と合わせる）。
+      </p>
+      <div class="callout">
+        <strong>AGENTS.md について</strong><br>
+        <code>create-next-app</code> 実行時に <code>AGENTS.md</code> が自動生成される。AI コーディングエージェント向けの注意書きファイルのため、削除しないこと。
+      </div>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ====== Step 2 ====== -->
+  <section class="step">
+    <div class="step-heading">
+      <div class="step-badge">2</div>
+      <h2>ディレクトリ構成の整備</h2>
+    </div>
+    <div class="step-body">
+      <p>
+        <code>create-next-app</code> 生成後、以下のディレクトリを手動で作成します。<br>
+        <strong>ファイルは各 Issue の実装時に作成します。空ファイルを置かないこと</strong>（Next.js 16 はビルド時にルートファイルのエクスポートを型チェックするため、空の <code>page.tsx</code> / <code>route.ts</code> はエラーになります）。
+      </p>
+      <div class="tree">frontend/
+├── app/
+│   ├── (auth)/
+│   │   └── login/              <span class="comment"># page.tsx は Issue #5（Auth.js）実装時に作成</span>
+│   ├── api/
+│   │   └── auth/
+│   │       └── [...nextauth]/  <span class="comment"># route.ts は Issue #5（Auth.js）実装時に作成</span>
+│   ├── layout.tsx              <span class="comment"># create-next-app が生成済み</span>
+│   └── page.tsx               <span class="comment"># create-next-app が生成済み（ダッシュボード）</span>
+├── components/
+│   ├── ui/                    <span class="comment"># Issue #8 実装時にファイルを追加</span>
+│   └── layout/                <span class="comment"># Issue #8 実装時に Header.tsx を作成</span>
+├── hooks/                     <span class="comment"># Issue #9 実装時に useToast.ts を作成</span>
+├── lib/                       <span class="comment"># Issue #5 実装時に auth.ts・api.ts を作成</span>
+└── types/                     <span class="comment"># 型定義が必要になったタイミングで index.ts を作成</span></div>
+      <p><code>(auth)</code> を Route Group にすることで、ログイン画面だけレイアウトを切り離せます。</p>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ====== Step 3 ====== -->
+  <section class="step">
+    <div class="step-heading">
+      <div class="step-badge">3</div>
+      <h2>ESLint 設定の拡張</h2>
+    </div>
+    <div class="step-body">
+      <p>
+        <code>create-next-app</code> が生成する <code>eslint.config.mjs</code>（ESLint v9 フラット設定）に追加ルールを足します。<br>
+        フラット設定では <code>eslint-plugin-import</code> の代わりに、flat config に対応したフォーク <code>eslint-plugin-import-x</code> を使います。
+      </p>
+      <pre><code>npm install -D eslint-plugin-import-x</code></pre>
+      <p><code>eslint.config.mjs</code> を以下のように更新します:</p>
+      <pre><code>import { defineConfig, globalIgnores } from "eslint/config";
+import nextVitals from "eslint-config-next/core-web-vitals";
+import nextTs from "eslint-config-next/typescript";
+import { importX } from "eslint-plugin-import-x";
+
+const eslintConfig = defineConfig([
+  ...nextVitals,
+  ...nextTs,
+  globalIgnores([
+    ".next/**",
+    "out/**",
+    "build/**",
+    "next-env.d.ts",
+  ]),
+  {
+    plugins: {
+      "import-x": importX,
+    },
+    rules: {
+      "no-console": "warn",
+      "prefer-const": "error",
+      "import-x/order": [
+        "warn",
+        {
+          groups: ["builtin", "external", "internal", "parent", "sibling", "index"],
+          "newlines-between": "always",
+        },
+      ],
+    },
+  },
+]);
+
+export default eslintConfig;</code></pre>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ====== Step 4 ====== -->
+  <section class="step">
+    <div class="step-heading">
+      <div class="step-badge">4</div>
+      <h2>Prettier 設定</h2>
+    </div>
+    <div class="step-body">
+      <pre><code>npm install -D prettier eslint-config-prettier</code></pre>
+      <p><code>.prettierrc</code> を作成:</p>
+      <pre><code>{
+  "semi": false,
+  "singleQuote": true,
+  "trailingComma": "all",
+  "printWidth": 100,
+  "tabWidth": 2
+}</code></pre>
+      <p><code>.prettierignore</code> を作成:</p>
+      <pre><code>.next/
+node_modules/
+public/</code></pre>
+      <p><code>eslint-config-prettier</code> を <code>eslint.config.mjs</code> の末尾に追加して ESLint との競合を解消します:</p>
+      <pre><code>import { defineConfig, globalIgnores } from "eslint/config";
+import nextVitals from "eslint-config-next/core-web-vitals";
+import nextTs from "eslint-config-next/typescript";
+import { importX } from "eslint-plugin-import-x";
+import prettier from "eslint-config-prettier";  // 追加
+
+const eslintConfig = defineConfig([
+  ...nextVitals,
+  ...nextTs,
+  globalIgnores([
+    ".next/**",
+    "out/**",
+    "build/**",
+    "next-env.d.ts",
+  ]),
+  {
+    plugins: {
+      "import-x": importX,
+    },
+    rules: {
+      "no-console": "warn",
+      "prefer-const": "error",
+      "import-x/order": [
+        "warn",
+        {
+          groups: ["builtin", "external", "internal", "parent", "sibling", "index"],
+          "newlines-between": "always",
+        },
+      ],
+    },
+  },
+  prettier,  // 末尾に追加（他のルールを上書きするため必ず最後）
+]);
+
+export default eslintConfig;</code></pre>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ====== Step 5 ====== -->
+  <section class="step">
+    <div class="step-heading">
+      <div class="step-badge">5</div>
+      <h2>tsconfig.json のパスエイリアス確認</h2>
+    </div>
+    <div class="step-body">
+      <p>
+        <code>create-next-app --import-alias "@/*"</code> を指定していれば自動設定されますが、確認します。
+      </p>
+      <p><code>tsconfig.json</code>:</p>
+      <pre><code>{
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./*"]
+    }
+  }
+}</code></pre>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ====== Step 6 ====== -->
+  <section class="step">
+    <div class="step-heading">
+      <div class="step-badge">6</div>
+      <h2>.env.local.example の作成</h2>
+    </div>
+    <div class="step-body">
+      <p>Phase 1〜4 で必要な環境変数をすべて列挙します。</p>
+      <pre><code># Auth.js v5
+AUTH_SECRET=your_secret_here
+AUTH_GOOGLE_ID=your_google_client_id
+AUTH_GOOGLE_SECRET=your_google_client_secret
+# AUTH_URL=https://&lt;Cloud Run ドメイン&gt;  # 本番環境では明示が必要
+
+# Spring Boot API（バックエンド）
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8080</code></pre>
+      <p>実際の値は <code>.env.local</code>（<code>.gitignore</code> 済み）に記載し、<code>.env.local.example</code> のみをコミットします。</p>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ====== Step 7 ====== -->
+  <section class="step">
+    <div class="step-heading">
+      <div class="step-badge">7</div>
+      <h2>package.json scripts の整備</h2>
+    </div>
+    <div class="step-body">
+      <pre><code>{
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  }
+}</code></pre>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ====== Step 8 ====== -->
+  <section class="step">
+    <div class="step-heading">
+      <div class="step-badge">8</div>
+      <h2>動作確認</h2>
+    </div>
+    <div class="step-body">
+      <pre><code>npm run dev           # localhost:3000 で起動確認
+npm run lint          # ESLint エラーなし
+npm run format        # Prettier フォーマット適用
+npm run build         # ビルドが通ること</code></pre>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ====== Completion Checklist ====== -->
+  <section>
+    <h2 style="font-size:20px;font-weight:700;margin-bottom:16px;">完了条件チェック</h2>
+    <table class="checklist">
+      <thead>
+        <tr>
+          <th>完了条件</th>
+          <th>対応ステップ</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>create-next-app</code> で TypeScript / App Router / Tailwind CSS 構成</td>
+          <td>Step 1</td>
+        </tr>
+        <tr>
+          <td>ESLint（<code>eslint-config-next</code>）・Prettier の設定</td>
+          <td>Step 3, 4</td>
+        </tr>
+        <tr>
+          <td>ディレクトリ構成の定義</td>
+          <td>Step 2</td>
+        </tr>
+        <tr>
+          <td>パスエイリアス <code>@/</code> の設定</td>
+          <td>Step 5</td>
+        </tr>
+        <tr>
+          <td><code>.env.local.example</code> の作成</td>
+          <td>Step 6</td>
+        </tr>
+        <tr>
+          <td><code>npm run dev</code> でローカル起動</td>
+          <td>Step 8</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+</div>
+</body>
+</html>

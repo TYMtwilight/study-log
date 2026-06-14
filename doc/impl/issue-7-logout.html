@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Issue #7 ログアウト機能実装手順書</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-size: 16px;
+      line-height: 1.7;
+      color: #24292f;
+      background: #ffffff;
+      margin: 0;
+      padding: 0;
+    }
+
+    .page {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 48px 32px 80px;
+    }
+
+    /* ---- Header ---- */
+    .doc-header {
+      border-bottom: 2px solid #d0d7de;
+      padding-bottom: 24px;
+      margin-bottom: 40px;
+    }
+
+    .doc-header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      margin: 0 0 12px;
+      color: #0d1117;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      font-size: 14px;
+      color: #57606a;
+    }
+
+    /* ---- Sections ---- */
+    .section { margin-bottom: 56px; }
+
+    .section-heading {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+
+    .section-badge {
+      flex-shrink: 0;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #0969da;
+      color: #fff;
+      font-size: 15px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .section-heading h2 {
+      font-size: 20px;
+      font-weight: 700;
+      margin: 0;
+      color: #0d1117;
+    }
+
+    .section-body { padding-left: 50px; }
+
+    /* ---- Sub-steps ---- */
+    .substep { margin-bottom: 40px; }
+
+    .substep-heading {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .substep-badge {
+      flex-shrink: 0;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #0969da;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .substep-heading h3 {
+      font-size: 17px;
+      font-weight: 700;
+      margin: 0;
+      color: #0d1117;
+    }
+
+    .substep-body { padding-left: 40px; }
+
+    h4 {
+      font-size: 15px;
+      font-weight: 600;
+      margin: 18px 0 8px;
+      color: #0d1117;
+    }
+
+    p { margin: 0 0 12px; }
+
+    /* ---- Callout ---- */
+    .callout {
+      border-left: 4px solid #0969da;
+      background: #ddf4ff;
+      border-radius: 0 6px 6px 0;
+      padding: 12px 16px;
+      margin: 16px 0;
+      font-size: 14px;
+    }
+
+    .callout strong { color: #0550ae; }
+    .callout code {
+      background: rgba(0,0,0,0.06);
+      border: none;
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+
+    .callout pre {
+      margin: 10px 0 4px;
+      background: rgba(0,0,0,0.04);
+      border: none;
+    }
+
+    /* ---- Tables ---- */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14.5px;
+      margin: 12px 0 20px;
+    }
+
+    th, td {
+      border: 1px solid #d0d7de;
+      padding: 9px 14px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    thead th {
+      background: #f6f8fa;
+      font-weight: 600;
+      color: #0d1117;
+    }
+
+    tbody tr:nth-child(even) td { background: #f6f8fa; }
+
+    .op-new  { color: #1a7f37; font-weight: 600; }
+    .op-del  { color: #cf222e; font-weight: 600; }
+    .op-upd  { color: #9a6700; font-weight: 600; }
+
+    /* ---- Code blocks ---- */
+    pre {
+      background: #f6f8fa;
+      border: 1px solid #d0d7de;
+      border-radius: 6px;
+      padding: 16px 20px;
+      overflow-x: auto;
+      font-size: 13.5px;
+      line-height: 1.6;
+      margin: 12px 0;
+    }
+
+    code {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    }
+
+    pre code { background: none; padding: 0; }
+
+    p code, li code, td code {
+      background: #f0f2f5;
+      border: 1px solid #d0d7de;
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-size: 13.5px;
+    }
+
+    .cmt { color: #57606a; font-style: italic; }
+
+    /* ---- Directory tree ---- */
+    .tree {
+      background: #f6f8fa;
+      border: 1px solid #d0d7de;
+      border-radius: 6px;
+      padding: 16px 20px;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 13.5px;
+      line-height: 1.8;
+      white-space: pre;
+      overflow-x: auto;
+    }
+
+    .tree .comment { color: #57606a; }
+    .tree .new     { color: #1a7f37; font-weight: 600; }
+    .tree .moved   { color: #9a6700; font-weight: 600; }
+
+    /* ---- Checklist ---- */
+    .checklist-items {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .checklist-items li {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid #f0f2f5;
+      font-size: 14.5px;
+    }
+
+    .checklist-items li:last-child { border-bottom: none; }
+
+    .check-icon {
+      flex-shrink: 0;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #1a7f37;
+      color: #fff;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 2px;
+    }
+
+    /* ---- Divider ---- */
+    hr {
+      border: none;
+      border-top: 1px solid #d0d7de;
+      margin: 40px 0;
+    }
+
+    .sub-hr {
+      border: none;
+      border-top: 1px dashed #d0d7de;
+      margin: 28px 0;
+    }
+
+    ul, ol { margin: 8px 0 12px; padding-left: 24px; }
+    li { margin-bottom: 6px; }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ====== Document Header ====== -->
+  <header class="doc-header">
+    <h1>Issue #7 ログアウト機能実装手順書</h1>
+    <div class="meta">
+      <span>対象イシュー: [Phase 1] ログアウト機能実装</span>
+      <span>関連要件: CLAUDE.md §3.1 F-01 / テスト仕様書 §2 AUTH-11</span>
+      <span>更新日: 2026-05-16</span>
+    </div>
+  </header>
+
+  <!-- ====== Section 1 ====== -->
+  <section class="section">
+    <div class="section-heading">
+      <div class="section-badge">1</div>
+      <h2>完了条件の確認</h2>
+    </div>
+    <div class="section-body">
+      <table>
+        <thead>
+          <tr><th>#</th><th>条件</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td>ヘッダーの「ログアウト」ボタン押下でセッションを破棄する（Auth.js <code>signOut</code>）</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td>ログアウト後に <code>/login</code> へリダイレクトする</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td>ログアウト後に <code>/</code> へ直接アクセスしても <code>/login</code> へ戻ることを確認する</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>
+        条件 3 はミドルウェア（<code>proxy.ts</code> の <code>authorized</code> コールバック）が既に実装済みのため、<br>
+        <strong>本イシューの実装スコープは条件 1・2</strong> のみ。
+      </p>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ====== Section 2 ====== -->
+  <section class="section">
+    <div class="section-heading">
+      <div class="section-badge">2</div>
+      <h2>実装ファイル一覧</h2>
+    </div>
+    <div class="section-body">
+      <table>
+        <thead>
+          <tr><th>操作</th><th>ファイル</th><th>内容</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="op-new">新規作成</span></td>
+            <td><code>app/(protected)/layout.tsx</code></td>
+            <td>認証済みページ共通レイアウト（Header を組み込む）</td>
+          </tr>
+          <tr>
+            <td><span class="op-new">新規作成</span></td>
+            <td><code>app/(protected)/page.tsx</code></td>
+            <td>ダッシュボード（<code>app/page.tsx</code> を移動）</td>
+          </tr>
+          <tr>
+            <td><span class="op-new">新規作成</span></td>
+            <td><code>app/(protected)/_components/Header.tsx</code></td>
+            <td>ログアウトボタンを含むヘッダー Server Component</td>
+          </tr>
+          <tr>
+            <td><span class="op-del">削除</span></td>
+            <td><code>app/page.tsx</code></td>
+            <td><code>app/(protected)/page.tsx</code> へ移動するため削除</td>
+          </tr>
+          <tr>
+            <td><span class="op-upd">更新</span></td>
+            <td><code>next.config.ts</code></td>
+            <td>Google CDN の <code>remotePatterns</code> を追加</td>
+          </tr>
+          <tr>
+            <td><span class="op-new">新規作成</span></td>
+            <td><code>e2e/fixtures/auth-file.ts</code></td>
+            <td><code>authFile</code> パスの定義のみを持つ定数ファイル</td>
+          </tr>
+          <tr>
+            <td><span class="op-new">新規作成</span></td>
+            <td><code>e2e/fixtures/auth.setup.ts</code></td>
+            <td>Playwright 認証済み状態セットアップ</td>
+          </tr>
+          <tr>
+            <td><span class="op-new">新規作成</span></td>
+            <td><code>e2e/logout.spec.ts</code></td>
+            <td>AUTH-11 E2E テスト</td>
+          </tr>
+          <tr>
+            <td><span class="op-upd">更新</span></td>
+            <td><code>playwright.config.ts</code></td>
+            <td><code>setup</code> プロジェクトの追加</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout">
+        <strong>なぜ <code>(protected)</code> ルートグループを作るか</strong><br>
+        <code>app/layout.tsx</code>（ルートレイアウト）にヘッダーを置くと <code>/login</code> にもヘッダーが表示されてしまう。<br>
+        <code>(protected)</code> ルートグループで認証済みページ専用のレイアウトを持つことで、ログイン画面とレイアウトを分離できる。
+      </div>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ====== Section 3 ====== -->
+  <section class="section">
+    <div class="section-heading">
+      <div class="section-badge">3</div>
+      <h2>実装ステップ</h2>
+    </div>
+    <div class="section-body">
+
+      <!-- Step 1 -->
+      <div class="substep">
+        <div class="substep-heading">
+          <div class="substep-badge">1</div>
+          <h3>ルートグループの整備</h3>
+        </div>
+        <div class="substep-body">
+          <h4>1-1. <code>app/(protected)/</code> ディレクトリを作成</h4>
+          <div class="tree">app/
+├── (auth)/
+│   └── login/
+│       └── page.tsx       <span class="comment">← 既存（変更なし）</span>
+├── (protected)/
+│   ├── _components/
+│   │   └── Header.tsx     <span class="new">← 新規</span>
+│   ├── layout.tsx         <span class="new">← 新規</span>
+│   └── page.tsx           <span class="moved">← 既存の app/page.tsx を移動</span>
+├── layout.tsx             <span class="comment">← 既存（変更なし）</span>
+└── globals.css            <span class="comment">← 既存（変更なし）</span></div>
+
+          <h4>1-2. <code>app/page.tsx</code> の内容を <code>app/(protected)/page.tsx</code> に移動</h4>
+          <pre><code><span class="cmt">// app/(protected)/page.tsx</span>
+export default function Home() {
+  return &lt;div&gt;ダッシュボード&lt;/div&gt;;
+}</code></pre>
+          <p>その後 <code>app/page.tsx</code> は削除する。</p>
+        </div>
+      </div>
+
+      <div class="sub-hr"></div>
+
+      <!-- Step 2 -->
+      <div class="substep">
+        <div class="substep-heading">
+          <div class="substep-badge">2</div>
+          <h3>Header コンポーネントの作成</h3>
+        </div>
+        <div class="substep-body">
+          <h4>2-1. <code>app/(protected)/_components/Header.tsx</code></h4>
+          <p>ポイント:</p>
+          <ul>
+            <li><code>auth()</code> でサーバーサイドのセッションを取得する Async Server Component</li>
+            <li>ログアウトボタンは <code>&lt;form&gt;</code> + Server Action で実装する（<code>signIn</code> と同じパターン）</li>
+            <li><code>signOut({ redirectTo: '/login' })</code> でセッション破棄 → <code>/login</code> へリダイレクト</li>
+          </ul>
+          <pre><code><span class="cmt">// app/(protected)/_components/Header.tsx</span>
+import Image from "next/image";
+import Link from "next/link";
+
+import { auth, signOut } from "@/auth";
+
+export default async function Header() {
+  const session = await auth();
+
+  return (
+    &lt;header className="flex items-center justify-between px-6 py-3 border-b bg-white shadow-sm"&gt;
+      &lt;Link href="/" className="text-lg font-bold text-gray-900"&gt;
+        STUDY LOG
+      &lt;/Link&gt;
+
+      &lt;nav className="hidden md:flex items-center gap-6 text-sm text-gray-600"&gt;
+        &lt;Link href="/" className="hover:text-gray-900"&gt;ダッシュボード&lt;/Link&gt;
+        &lt;Link href="/study-logs" className="hover:text-gray-900"&gt;学習ログ&lt;/Link&gt;
+        &lt;Link href="/subjects" className="hover:text-gray-900"&gt;科目管理&lt;/Link&gt;
+        &lt;Link href="/reports/monthly" className="hover:text-gray-900"&gt;CSVダウンロード&lt;/Link&gt;
+        &lt;Link href="/batch-history" className="hover:text-gray-900"&gt;バッチ履歴&lt;/Link&gt;
+      &lt;/nav&gt;
+
+      &lt;div className="flex items-center gap-3"&gt;
+        {session?.user?.image &amp;&amp; (
+          &lt;Image
+            src={session.user.image}
+            alt={session.user.name ?? "ユーザー"}
+            width={32}
+            height={32}
+            className="rounded-full"
+          /&gt;
+        )}
+        &lt;span className="text-sm text-gray-700"&gt;{session?.user?.name}&lt;/span&gt;
+
+        {/* Server Action でサインアウトを呼び出す */}
+        &lt;form
+          action={async () =&gt; {
+            "use server";
+            await signOut({ redirectTo: "/login" });
+          }}
+        &gt;
+          &lt;button
+            type="submit"
+            className="rounded-md border border-gray-300 px-3 py-1 text-sm
+              text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer"
+          &gt;
+            ログアウト
+          &lt;/button&gt;
+        &lt;/form&gt;
+      &lt;/div&gt;
+    &lt;/header&gt;
+  );
+}</code></pre>
+
+          <div class="callout">
+            <strong><code>'use server'</code> について</strong><br>
+            フォームのボタンを押すのはブラウザ（クライアント）。ブラウザはサーバーのコードを直接呼べないため、Next.js が間に入って「このURLにPOSTしたらこの関数を実行する」という専用エンドポイントを自動生成する。<code>'use server'</code> はその指示であり、「この関数をエンドポイントとして登録して」と Next.js に伝えている。<br><br>
+            <code>signOut</code> 自体はただのサーバー関数なので、エンドポイント登録（<code>'use server'</code>）は不要。<code>auth.ts</code> に <code>'use server'</code> が書かれていないのも同じ理由。
+          </div>
+
+          <div class="callout">
+            <strong><code>signOut</code> の引数について</strong>
+            <table style="margin-top:10px;">
+              <thead>
+                <tr><th>引数</th><th>説明</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>redirectTo: '/login'</code></td>
+                  <td>セッション破棄後のリダイレクト先。省略すると Auth.js がデフォルト（<code>/</code>）にリダイレクトし、ミドルウェアが <code>/login</code> に転送する二重リダイレクトが起きる。明示指定が望ましい。</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h4>2-2. <code>app/(protected)/layout.tsx</code></h4>
+          <pre><code><span class="cmt">// app/(protected)/layout.tsx</span>
+import Header from "./_components/Header";
+
+export default function AppLayout({ children }: { children: React.ReactNode }) {
+  return (
+    &lt;&gt;
+      &lt;Header /&gt;
+      &lt;main className="mx-auto max-w-5xl px-4 py-6"&gt;{children}&lt;/main&gt;
+    &lt;/&gt;
+  );
+}</code></pre>
+
+          <h4>2-3. <code>next.config.ts</code> の更新</h4>
+          <p>
+            <code>next/image</code> で Google プロフィール画像を読み込むため、<code>remotePatterns</code> に許可ドメインを追加する。<br>
+            設定がないと本番ビルドで <code>Error: Invalid src prop</code> が発生する。
+          </p>
+          <p>
+            <code>lh3.googleusercontent.com</code> は Google でログインしたときに <code>session.user.image</code> へ入るプロフィール画像の配信元ドメイン。<code>lh3</code> は Google の画像ホスティングサーバーの識別子で、<code>googleusercontent.com</code> が Google のユーザーコンテンツ配信ドメイン。
+          </p>
+          <pre><code><span class="cmt">// next.config.ts</span>
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com",
+        port: "",
+        pathname: "/**",
+      },
+    ],
+  },
+};
+
+export default nextConfig;</code></pre>
+          <p>
+            <code>port: ''</code> は標準ポート（443）のみ許可し、<code>:8080</code> などの非標準ポートからの画像を拒否する。<code>pathname: '/**'</code> は Google のプロフィール画像 URL がリクエストごとにパスが異なるため、配下の全パスを許可するワイルドカード指定。
+          </p>
+        </div>
+      </div>
+
+      <div class="sub-hr"></div>
+
+      <!-- Step 3 -->
+      <div class="substep">
+        <div class="substep-heading">
+          <div class="substep-badge">3</div>
+          <h3>E2E テストフィクスチャーの整備</h3>
+        </div>
+        <div class="substep-body">
+          <p>
+            E2E テストでログアウトを検証するには、まず「ログイン済み状態」を作る必要がある。しかし毎回 Google のログイン画面を実際に操作するのはテストの自動化として現実的でない。
+          </p>
+          <p>
+            ブラウザがログイン済みかどうかは<strong>セッションクッキーの有無</strong>で判定される。そのため、テスト側でセッションクッキーをブラウザに直接注入すれば、Google を通らずにログイン済み状態を作れる。
+          </p>
+          <p>
+            ただし、セッションクッキーの中身はそのままユーザー情報が入っているわけではなく、Auth.js が <code>AUTH_SECRET</code>（アプリだけが知っている秘密の文字列）を使って「このデータは本物です」という証明を付けた形式になっている。でたらめな値を注入しても Auth.js に偽物と判定されて弾かれる。
+          </p>
+          <p>
+            <code>@auth/core/jwt</code> の <code>encode</code> 関数は Auth.js 自身がセッションクッキーを生成するときに呼び出している関数。テストコードからこの関数を同じ <code>AUTH_SECRET</code> で呼べば、Auth.js が本物として受け入れるクッキーを生成できる。
+          </p>
+
+          <h4>3-1. <code>e2e/fixtures/auth-file.ts</code> を作成</h4>
+          <p>
+            <code>authFile</code> 定数（ストレージ状態の保存先パス）を定義するだけのファイル。<br>
+            <code>.auth</code> は Unix 系 OS の慣習で「隠しフォルダ」を意味するプレフィックス。セッションクッキー（認証情報）を含むファイルのため、誤ってコミットされないよう隠しフォルダに配置する。Playwright の公式ドキュメントでも <code>.auth/</code> という名前が使われている慣習に倣っている。
+          </p>
+          <pre><code><span class="cmt">// e2e/fixtures/auth-file.ts</span>
+export const authFile = "e2e/fixtures/.auth/user.json";</code></pre>
+
+          <div class="callout">
+            <strong>なぜ専用ファイルに分離するか</strong><br>
+            <code>authFile</code> 定数は <code>playwright.config.ts</code>（テスト設定）と <code>auth.setup.ts</code>（セットアップ処理）の両方で使う。当初は <code>auth.setup.ts</code> で <code>export const authFile = ...</code> と定義して <code>playwright.config.ts</code> からインポートしていたが、次のエラーが発生した：
+            <pre><code>Error: Playwright Test did not expect test() to be called here.</code></pre>
+            <code>auth.setup.ts</code> では <code>setup()</code> = <code>test()</code> を呼び出しており、<code>playwright.config.ts</code> が <code>auth.setup.ts</code> をインポートするだけで <code>test()</code> がモジュールロード時に実行されてしまう。Playwright はテスト設定ファイルのロード中に <code>test()</code> が呼ばれることを想定していないためこのエラーになる。<br><br>
+            定数だけを切り出した <code>auth-file.ts</code> を作り、両方のファイルからインポートすることでこの問題を解消する。
+          </div>
+
+          <h4>3-2. <code>e2e/fixtures/auth.setup.ts</code> を作成</h4>
+          <p>このファイル全体でやっていることは一つ。<strong>「テスト用のログイン済みクッキーを作ってブラウザに注入し、ファイルに保存する」</strong>。3 つのステップに分かれている。</p>
+          <ol>
+            <li><code>encode()</code> でテスト用セッションクッキーの値を生成する</li>
+            <li><code>addCookies()</code> でそのクッキーをブラウザに注入する（これでブラウザが「ログイン済み」になる）</li>
+            <li><code>storageState()</code> でその状態をファイルに書き出す（<code>logout.spec.ts</code> がこのファイルを読み込んでログイン済み状態でテストを開始する）</li>
+          </ol>
+          <pre><code><span class="cmt">// e2e/fixtures/auth.setup.ts</span>
+import { test as setup } from "@playwright/test";
+import { encode } from "@auth/core/jwt";
+import { authFile } from "./auth-file";
+
+setup("認証済み状態のセットアップ", async ({ page }) =&gt; {
+  <span class="cmt">// ① Auth.js と同じ encode() 関数・同じ AUTH_SECRET を使ってセッションクッキーの値を生成する。
+  //    Auth.js はクッキーを受け取るたびに AUTH_SECRET で検証するため、
+  //    同じ関数・同じ SECRET で生成すれば「本物」として受け入れられる。</span>
+  const sessionToken = await encode({
+    token: {
+      name: "テストユーザー",    <span class="cmt">// ユーザーの表示名</span>
+      email: "test@example.com", <span class="cmt">// メールアドレス</span>
+      picture: null,             <span class="cmt">// プロフィール画像URL（テストでは不要なので null）</span>
+      sub: "test-user-id",       <span class="cmt">// Auth.js がユーザーを一意に識別する ID</span>
+      id: "test-user-id",        <span class="cmt">// auth.ts の jwt コールバックで追加したカスタムフィールド（token.id）</span>
+    },
+    secret: process.env.AUTH_SECRET!,
+    <span class="cmt">// Auth.js はセッションクッキーを検証するとき、
+    // クッキーの値だけでなくクッキー名（authjs.session-token）も検証の計算に組み込んでいる。
+    // encode() でトークンを生成するときも同じクッキー名を渡さないと
+    // 計算結果がずれて Auth.js に偽物と判定される。</span>
+    salt: "authjs.session-token",
+  });
+
+  <span class="cmt">// ② 生成したクッキーをブラウザに直接注入する。これでブラウザが「ログイン済み」の状態になる。</span>
+  await page.context().addCookies([
+    {
+      name: "authjs.session-token", <span class="cmt">// クッキーの名前。Auth.js がこの名前でセッションを探す</span>
+      value: sessionToken,           <span class="cmt">// クッキーの中身。①で生成したトークン</span>
+      domain: "localhost",           <span class="cmt">// このクッキーを送るドメイン。テスト対象が localhost で動くため</span>
+      path: "/",                     <span class="cmt">// このクッキーを送るパス。/ はすべてのパスに送ることを意味する</span>
+      httpOnly: true,                <span class="cmt">// JavaScript からクッキーを読み取れなくする。Auth.js のデフォルトに合わせる</span>
+      secure: false,                 <span class="cmt">// true にすると HTTPS のときだけ送る。ローカルは HTTP なので false</span>
+      sameSite: "Lax",               <span class="cmt">// 別サイトからの POST ではクッキーを送らない。Auth.js のデフォルトに合わせる</span>
+    },
+  ]);
+
+  <span class="cmt">// ③ ブラウザのクッキー状態をファイルに書き出す。
+  //    storageState はブラウザが持つデータ（クッキー・localStorage など）の状態をまるごとファイルに保存・復元する Playwright の機能。
+  //    auth.setup.ts（事前準備）と logout.spec.ts（テスト本体）は別プロセスで実行されるため、
+  //    プロセスをまたいでブラウザの状態を引き継ぐにはいったんファイルに書き出す必要がある。
+  //    logout.spec.ts は playwright.config.ts の storageState: authFile の設定によって
+  //    このファイルをテスト開始時に自動で読み込むため、最初からログイン済み状態でテストが始まる。</span>
+  await page.context().storageState({ path: authFile });
+});</code></pre>
+
+          <p><strong>注意点:</strong></p>
+          <ul>
+            <li><code>AUTH_SECRET</code> は <code>.env.local</code> に設定済みの値を使う（テスト実行時に環境変数として渡す）</li>
+            <li><code>e2e/fixtures/.auth/</code> は <code>.gitignore</code> に追加してトークンをコミットしないこと</li>
+          </ul>
+
+          <h4>3-3. <code>.gitignore</code> に追記</h4>
+          <pre><code><span class="cmt"># E2E 認証フィクスチャー（セッショントークンを含む）</span>
+e2e/fixtures/.auth/</code></pre>
+        </div>
+      </div>
+
+      <div class="sub-hr"></div>
+
+      <!-- Step 4 -->
+      <div class="substep">
+        <div class="substep-heading">
+          <div class="substep-badge">4</div>
+          <h3><code>playwright.config.ts</code> の更新</h3>
+        </div>
+        <div class="substep-body">
+          <p>
+            <code>setup</code> プロジェクトを追加し、認証済みテストが必ずセットアップ後に実行されるようにする。
+          </p>
+          <p>
+            また、<code>dotenv</code> で <code>.env.local</code> を明示的に読み込む。Next.js は起動時に <code>.env.local</code> を自動で読むが、Playwright のテストランナーは別プロセスのため自動では読み込まない。設定しないと <code>auth.setup.ts</code> が <code>AUTH_SECRET</code> を <code>undefined</code> として受け取り、<code>encode()</code> が <code>TypeError: "ikm" must be an instance of Uint8Array or a string</code> で失敗する。
+          </p>
+          <pre><code>npm install --save-dev dotenv</code></pre>
+          <pre><code><span class="cmt">// playwright.config.ts</span>
+import { defineConfig, devices } from "@playwright/test";
+import dotenv from "dotenv";
+
+dotenv.config({ path: ".env.local" });
+
+import { authFile } from "./e2e/fixtures/auth-file";
+
+export default defineConfig({
+  testDir: "./e2e",
+  timeout: 30_000,
+  globalTimeout: process.env.CI ? 60 * 60 * 1000 : undefined,
+  fullyParallel: true,
+  forbidOnly: !!process.env.CI,
+  retries: process.env.CI ? 2 : 0,
+  reporter: process.env.CI
+    ? [["github"], ["html", { open: "never" }]]
+    : [["list"], ["html", { open: "on-failure" }]],
+  use: {
+    baseURL: process.env.BASE_URL ?? "http://localhost:3000",
+    trace: "on-first-retry",
+  },
+  projects: [
+    <span class="cmt">// 認証済みセットアップ（他のプロジェクトより先に実行）</span>
+    {
+      name: "setup",
+      testMatch: /auth\.setup\.ts/,
+    },
+    <span class="cmt">// 認証不要テスト（未認証リダイレクト・ログインページ）</span>
+    {
+      name: "chromium-public",
+      use: { ...devices["Desktop Chrome"] },
+      testIgnore: /logout\.spec\.ts/,
+    },
+    <span class="cmt">// 認証済みテスト（logout など）</span>
+    {
+      name: "chromium-auth",
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: authFile,
+      },
+      testMatch: /logout\.spec\.ts/,
+      dependencies: ["setup"],
+    },
+  ],
+  webServer: {
+    command: "npm run build &amp;&amp; npm run start",
+    url: "http://localhost:3000",
+    reuseExistingServer: !process.env.CI,
+    timeout: 120_000,
+    stdout: "ignore",
+    stderr: "pipe",
+    env: {
+      ...process.env,
+      AUTH_TRUST_HOST: "true",
+    },
+  },
+});</code></pre>
+        </div>
+      </div>
+
+      <div class="sub-hr"></div>
+
+      <!-- Step 5 -->
+      <div class="substep">
+        <div class="substep-heading">
+          <div class="substep-badge">5</div>
+          <h3><code>e2e/logout.spec.ts</code> の実装</h3>
+        </div>
+        <div class="substep-body">
+          <pre><code><span class="cmt">// e2e/logout.spec.ts</span>
+import { test, expect } from "@playwright/test";
+
+/**
+ * AUTH-11: ログアウトでセッション破棄
+ * storageState = e2e/fixtures/.auth/user.json（playwright.config.ts の chromium-auth プロジェクト）
+ */
+test.describe("ログアウト（AUTH-11）", () =&gt; {
+  test("ヘッダーのログアウトボタンを押すと /login へ遷移する", async ({
+    page,
+  }) =&gt; {
+    <span class="cmt">// 認証済み状態でダッシュボードへ</span>
+    await page.goto("/");
+    await expect(page).toHaveURL("/");
+
+    <span class="cmt">// ヘッダーのログアウトボタンをクリック</span>
+    await page.getByRole("button", { name: "ログアウト" }).click();
+
+    <span class="cmt">// /login へリダイレクトされることを確認</span>
+    await expect(page).toHaveURL(/\/login/);
+  });
+
+  test("ログアウト後に / へ直接アクセスすると /login へリダイレクトされる", async ({
+    page,
+    context,
+  }) =&gt; {
+    <span class="cmt">// ログアウト（セッションクッキーを削除）</span>
+    await page.goto("/");
+    await page.getByRole("button", { name: "ログアウト" }).click();
+    await expect(page).toHaveURL(/\/login/);
+
+    <span class="cmt">// 新しいページで / に直接アクセス</span>
+    const newPage = await context.newPage();
+    await newPage.goto("/");
+    await expect(newPage).toHaveURL(/\/login/);
+  });
+});</code></pre>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ====== Section 4 ====== -->
+  <section class="section">
+    <div class="section-heading">
+      <div class="section-badge">4</div>
+      <h2>動作確認手順</h2>
+    </div>
+    <div class="section-body">
+      <h3 style="margin-top:0;">ローカルでの手動確認</h3>
+      <pre><code><span class="cmt"># 開発サーバーを起動</span>
+npm run dev
+
+<span class="cmt"># ブラウザで確認
+# 1. http://localhost:3000 にアクセス → /login へリダイレクト
+# 2. Google ログイン → ダッシュボードへ遷移
+# 3. ヘッダーにユーザー名・アイコンとログアウトボタンが表示されている
+# 4. ログアウトボタンを押す → /login へ遷移
+# 5. ブラウザの戻るボタンで / へ → /login へリダイレクトされる</span></code></pre>
+
+      <h3>E2E テストの実行</h3>
+      <pre><code><span class="cmt"># テストを実行（AUTH_SECRET は playwright.config.ts の dotenv.config() が .env.local から自動で読み込む）</span>
+npm run test:e2e
+
+<span class="cmt"># 特定のスペックのみ実行</span>
+npx playwright test logout.spec.ts</code></pre>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ====== Section 5 ====== -->
+  <section class="section">
+    <div class="section-heading">
+      <div class="section-badge">5</div>
+      <h2>実装チェックリスト</h2>
+    </div>
+    <div class="section-body">
+      <ul class="checklist-items">
+        <li><span class="check-icon">✓</span><span><code>app/(protected)/page.tsx</code> を作成（<code>app/page.tsx</code> の内容を移動）</span></li>
+        <li><span class="check-icon">✓</span><span><code>app/page.tsx</code> を削除</span></li>
+        <li><span class="check-icon">✓</span><span><code>app/(protected)/_components/Header.tsx</code> を作成</span></li>
+        <li><span class="check-icon">✓</span><span><code>app/(protected)/layout.tsx</code> を作成</span></li>
+        <li><span class="check-icon">✓</span><span><code>next.config.ts</code> に Google CDN の <code>remotePatterns</code> を追加</span></li>
+        <li><span class="check-icon">✓</span><span><code>e2e/fixtures/auth-file.ts</code> を作成</span></li>
+        <li><span class="check-icon">✓</span><span><code>e2e/fixtures/auth.setup.ts</code> を作成</span></li>
+        <li><span class="check-icon">✓</span><span><code>e2e/fixtures/.auth/</code> を <code>.gitignore</code> に追加</span></li>
+        <li><span class="check-icon">✓</span><span><code>playwright.config.ts</code> に <code>setup</code> プロジェクトを追加</span></li>
+        <li><span class="check-icon">✓</span><span><code>e2e/logout.spec.ts</code> を作成</span></li>
+        <li><span class="check-icon">✓</span><span>手動でログアウト → <code>/login</code> リダイレクトを確認</span></li>
+        <li><span class="check-icon">✓</span><span>E2E テストがグリーン</span></li>
+      </ul>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

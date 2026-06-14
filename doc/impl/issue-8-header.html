@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Issue #8 共通ヘッダーコンポーネント実装手順書</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-size: 16px;
+      line-height: 1.7;
+      color: #24292f;
+      background: #ffffff;
+      margin: 0;
+      padding: 0;
+    }
+
+    .page {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 48px 32px 80px;
+    }
+
+    /* ---- Header ---- */
+    .doc-header {
+      border-bottom: 2px solid #d0d7de;
+      padding-bottom: 24px;
+      margin-bottom: 40px;
+    }
+
+    .doc-header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      margin: 0 0 12px;
+      color: #0d1117;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      font-size: 14px;
+      color: #57606a;
+    }
+
+    /* ---- Sections ---- */
+    .section { margin-bottom: 56px; }
+
+    .section-heading {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+
+    .section-badge {
+      flex-shrink: 0;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #0969da;
+      color: #fff;
+      font-size: 15px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .section-heading h2 {
+      font-size: 20px;
+      font-weight: 700;
+      margin: 0;
+      color: #0d1117;
+    }
+
+    .section-body { padding-left: 50px; }
+
+    /* ---- Sub-steps ---- */
+    .substep { margin-bottom: 40px; }
+
+    .substep-heading {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .substep-badge {
+      flex-shrink: 0;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #0969da;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .substep-heading h3 {
+      font-size: 17px;
+      font-weight: 700;
+      margin: 0;
+      color: #0d1117;
+    }
+
+    .substep-body { padding-left: 40px; }
+
+    h4 {
+      font-size: 15px;
+      font-weight: 600;
+      margin: 18px 0 8px;
+      color: #0d1117;
+    }
+
+    p { margin: 0 0 12px; }
+
+    /* ---- Callout ---- */
+    .callout {
+      border-left: 4px solid #0969da;
+      background: #ddf4ff;
+      border-radius: 0 6px 6px 0;
+      padding: 12px 16px;
+      margin: 16px 0;
+      font-size: 14px;
+    }
+
+    .callout strong { color: #0550ae; }
+    .callout code {
+      background: rgba(0,0,0,0.06);
+      border: none;
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+
+    .callout pre {
+      margin: 10px 0 4px;
+      background: rgba(0,0,0,0.04);
+      border: none;
+    }
+
+    /* ---- Tables ---- */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14.5px;
+      margin: 12px 0 20px;
+    }
+
+    th, td {
+      border: 1px solid #d0d7de;
+      padding: 9px 14px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    thead th {
+      background: #f6f8fa;
+      font-weight: 600;
+      color: #0d1117;
+    }
+
+    tbody tr:nth-child(even) td { background: #f6f8fa; }
+
+    .op-new  { color: #1a7f37; font-weight: 600; }
+    .op-upd  { color: #9a6700; font-weight: 600; }
+
+    .status-done { color: #1a7f37; font-weight: 600; }
+    .status-todo { color: #cf222e; font-weight: 600; }
+
+    /* ---- Code blocks ---- */
+    pre {
+      background: #f6f8fa;
+      border: 1px solid #d0d7de;
+      border-radius: 6px;
+      padding: 16px 20px;
+      overflow-x: auto;
+      font-size: 13.5px;
+      line-height: 1.6;
+      margin: 12px 0;
+    }
+
+    code {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    }
+
+    pre code { background: none; padding: 0; }
+
+    p code, li code, td code {
+      background: #f0f2f5;
+      border: 1px solid #d0d7de;
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-size: 13.5px;
+    }
+
+    .cmt { color: #57606a; font-style: italic; }
+
+    /* ---- Directory tree ---- */
+    .tree {
+      background: #f6f8fa;
+      border: 1px solid #d0d7de;
+      border-radius: 6px;
+      padding: 16px 20px;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 13.5px;
+      line-height: 1.8;
+      white-space: pre;
+      overflow-x: auto;
+    }
+
+    .tree .comment { color: #57606a; }
+    .tree .new     { color: #1a7f37; font-weight: 600; }
+    .tree .moved   { color: #9a6700; font-weight: 600; }
+
+    /* ---- Ascii diagram ---- */
+    .diagram {
+      background: #f6f8fa;
+      border: 1px solid #d0d7de;
+      border-radius: 6px;
+      padding: 16px 20px;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 13px;
+      line-height: 1.7;
+      white-space: pre;
+      overflow-x: auto;
+      color: #24292f;
+    }
+
+    /* ---- Checklist ---- */
+    .checklist-items {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .checklist-items li {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid #f0f2f5;
+      font-size: 14.5px;
+    }
+
+    .checklist-items li:last-child { border-bottom: none; }
+
+    .check-icon {
+      flex-shrink: 0;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #1a7f37;
+      color: #fff;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 2px;
+    }
+
+    .check-icon-todo {
+      flex-shrink: 0;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 2px solid #d0d7de;
+      background: #fff;
+      margin-top: 2px;
+    }
+
+    /* ---- Divider ---- */
+    hr {
+      border: none;
+      border-top: 1px solid #d0d7de;
+      margin: 40px 0;
+    }
+
+    .sub-hr {
+      border: none;
+      border-top: 1px dashed #d0d7de;
+      margin: 28px 0;
+    }
+
+    ul, ol { margin: 8px 0 12px; padding-left: 24px; }
+    li { margin-bottom: 6px; }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ====== Document Header ====== -->
+  <header class="doc-header">
+    <h1>Issue #8 共通ヘッダーコンポーネント実装手順書</h1>
+    <div class="meta">
+      <span>対象イシュー: [Phase 1] 共通ヘッダーコンポーネント実装</span>
+      <span>関連要件: CLAUDE.md §3.1 / 画面定義書 §3.1 ヘッダー / テスト仕様書 §13 MOBILE-01</span>
+      <span>更新日: 2026-05-20</span>
+    </div>
+  </header>
+
+  <!-- ====== Section 1 ====== -->
+  <section class="section">
+    <div class="section-heading">
+      <div class="section-badge">1</div>
+      <h2>完了条件の確認</h2>
+    </div>
+    <div class="section-body">
+      <table>
+        <thead>
+          <tr><th>#</th><th>条件</th><th>現状</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td>ロゴ / アプリ名を表示する</td>
+            <td><span class="status-done">✅ 実装済み（Issue #7）</span></td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td>ナビゲーションリンクを実装する（ダッシュボード・学習ログ一覧・科目管理・CSVダウンロード・バッチ履歴）</td>
+            <td><span class="status-done">✅ 実装済み（Issue #7）</span></td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td>ユーザーアイコン・名前を表示する（Auth.js セッションから取得）</td>
+            <td><span class="status-done">✅ 実装済み（Issue #7）</span></td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td>ログアウトボタンを実装する</td>
+            <td><span class="status-done">✅ 実装済み（Issue #7）</span></td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td>モバイル対応（ハンバーガーメニュー等）を行う</td>
+            <td><span class="status-todo">❌ 未対応（PC でしか表示なし）</span></td>
+          </tr>
+          <tr>
+            <td>6</td>
+            <td>現在のページに対応するナビゲーションをアクティブ状態にする</td>
+            <td><span class="status-todo">❌ 未対応</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <p><strong>本イシューの実装スコープは条件 5・6</strong> のみ。</p>
+      <p>
+        現状の <code>Header.tsx</code> は <code>hidden md:flex</code> でナビゲーションを PC のみに出しているため、
+        モバイルではログイン中のユーザーが画面遷移できない。アクティブ状態も付いておらず、現在ページがわからない。
+      </p>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ====== Section 2 ====== -->
+  <section class="section">
+    <div class="section-heading">
+      <div class="section-badge">2</div>
+      <h2>設計方針</h2>
+    </div>
+    <div class="section-body">
+
+      <!-- 2.1 -->
+      <h4>2.1 Server Component と Client Component の分離</h4>
+      <p>
+        <code>Header</code> は <code>auth()</code> でセッションを取得する必要があるため <strong>Server Component</strong> で維持する。
+        しかし「アクティブ状態」「ハンバーガーメニューの開閉」はクライアント側の状態に依存するため、<strong>Client Component</strong> が必要になる。
+      </p>
+      <p>ベストプラクティス（Next.js 16 公式）：</p>
+      <ul>
+        <li><strong>Layout / Header は Server Component に保つ</strong>（セッション取得・データフェッチを行うため）</li>
+        <li><strong><code>usePathname</code> と <code>useState</code> を使う部分だけを Client Component に切り出す</strong></li>
+      </ul>
+      <p>そのため、以下の 2 ファイル構成にする。</p>
+      <table>
+        <thead>
+          <tr><th>ファイル</th><th>種別</th><th>役割</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>app/(protected)/_components/Header.tsx</code></td>
+            <td>Server Component</td>
+            <td>レイアウト・ロゴ・ユーザー情報・ログアウトフォーム・<code>NavLinks</code> の配置</td>
+          </tr>
+          <tr>
+            <td><code>app/(protected)/_components/NavLinks.tsx</code></td>
+            <td>Client Component</td>
+            <td>ナビゲーションリンクの描画・<code>usePathname</code> によるアクティブ状態・ハンバーガーメニュー制御</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="callout">
+        <strong>なぜ Header 全体を Client Component にしないか</strong><br>
+        ログアウトの Server Action（<code>'use server'</code>）は Server Component の <code>&lt;form action={...}&gt;</code>
+        の中でしか定義できない。Client Component 化すると Server Action を別ファイルに切り出す必要があり、
+        Issue #7 の構造から不必要に逸脱する。最小スコープで完了条件を満たすため、必要な部分だけを Client Component 化する。
+      </div>
+
+      <!-- 2.2 -->
+      <h4>2.2 アクティブ判定ルール</h4>
+      <table>
+        <thead>
+          <tr><th>パスパターン</th><th>アクティブにする条件</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>/</code>（ダッシュボード）</td>
+            <td><code>pathname === '/'</code></td>
+          </tr>
+          <tr>
+            <td><code>/study-logs</code>（学習ログ）</td>
+            <td><code>pathname === '/study-logs' || pathname.startsWith('/study-logs/')</code></td>
+          </tr>
+          <tr>
+            <td><code>/subjects</code>（科目管理）</td>
+            <td><code>pathname === '/subjects' || pathname.startsWith('/subjects/')</code></td>
+          </tr>
+          <tr>
+            <td><code>/reports/monthly</code>（CSV）</td>
+            <td><code>pathname.startsWith('/reports/monthly')</code></td>
+          </tr>
+          <tr>
+            <td><code>/batch-history</code>（バッチ履歴）</td>
+            <td><code>pathname.startsWith('/batch-history')</code></td>
+          </tr>
+        </tbody>
+      </table>
+      <p>ダッシュボード（<code>/</code>）だけは厳密一致にする。<code>startsWith('/')</code> は全パスに一致してしまうため。</p>
+
+      <!-- 2.3 -->
+      <h4>2.3 モバイルメニューの挙動</h4>
+      <table>
+        <thead>
+          <tr><th>状態</th><th>表示</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>md</code> 以上</td>
+            <td>ナビゲーションリンクを横並びで表示。ハンバーガーは非表示</td>
+          </tr>
+          <tr>
+            <td><code>md</code> 未満（閉）</td>
+            <td>ハンバーガーアイコンのみ表示。ナビゲーションは非表示</td>
+          </tr>
+          <tr>
+            <td><code>md</code> 未満（開）</td>
+            <td>ハンバーガーアイコンの下にドロワー風にリンクを縦並び表示</td>
+          </tr>
+        </tbody>
+      </table>
+      <ul>
+        <li>状態は <code>useState&lt;boolean&gt;</code> で保持する</li>
+        <li>リンクをタップしたらメニューを閉じる（<code>onClick</code> で <code>setOpen(false)</code>）</li>
+        <li>アイコンは既に依存に入っている <code>react-icons</code> を使う（<code>FaBars</code> / <code>FaTimes</code>）</li>
+        <li><strong>ESC キー</strong>でドロワーを閉じる（<code>useEffect</code> で <code>keydown</code> イベントを購読。<code>open</code> が <code>true</code> の間だけリスナーを登録する）</li>
+        <li><strong>ドロワー外クリック</strong>でドロワーを閉じる（<code>useEffect</code> で <code>mousedown</code> イベントを購読。<code>#mobile-nav</code> またはハンバーガーボタン内のクリックはスキップ）</li>
+        <li><strong>ルート変更時</strong>にドロワーを閉じる（React 19 の "adjust state during render" パターンで <code>prevPathname</code> との差分を検知して <code>setOpen(false)</code>。<code>useEffect</code> 内で <code>setState</code> すると ESLint の <code>react-hooks/set-state-in-effect</code> 警告が出るため、レンダリング中に直接更新する）</li>
+      </ul>
+
+      <!-- 2.4 -->
+      <h4>2.4 アクセシビリティ</h4>
+      <ul>
+        <li>ハンバーガーボタンに <code>aria-label="メニューを開く" / "メニューを閉じる"</code>、<code>aria-expanded</code>、<code>aria-controls</code> を付与する</li>
+        <li>PC 用 <code>&lt;nav&gt;</code> に <code>aria-label="メインナビゲーション"</code> を付与する</li>
+        <li>モバイル用 <code>&lt;nav&gt;</code> に <code>aria-label="モバイルナビゲーション"</code> と <code>id="mobile-nav"</code> を付与し、<code>aria-controls</code> から参照する</li>
+        <li>アクティブなリンクに <code>aria-current="page"</code> を付与する</li>
+        <li>モバイルドロワーは <code>{open &amp;&amp; (...)}</code> の条件付きレンダリングではなく <strong><code>hidden={!open}</code> で常に DOM に存在させる</strong>。<code>aria-controls="mobile-nav"</code> の参照先が常に存在する必要があるため（<code>hidden</code> 属性を使うことでアクセシビリティツリーからは除外しつつ DOM には残す）</li>
+      </ul>
+
+      <!-- 2.5 -->
+      <h4>2.5 ハイドレーションと未実装ルートの対策</h4>
+      <p>
+        <code>NavLinks</code> は <code>'use client'</code> で動作する Client Component で、ブラウザでイベントハンドラを紐付けるために
+        <strong>ハイドレーション</strong>が必要になる。本イシューの実装中、ナビゲーション先のページが未実装だと
+        <strong>ドロワーが開かなくなる</strong>不具合に遭遇したため、その背景と対策を残す。
+      </p>
+
+      <h4>ハイドレーションとは</h4>
+      <p>
+        サーバーが生成した HTML をブラウザに送り（見た目だけ。<code>onClick</code> などは未接続）、その後ブラウザで React が起動して
+        既存の DOM をスキャンしながらイベントハンドラを紐付けていく工程。Server Side Rendering を採用する Next.js では、
+        Client Component の <code>onClick</code> などはハイドレーションが完了して初めて発火するようになる。
+      </p>
+      <div class="diagram">[サーバー]                [ブラウザ]
+ ┌────────┐    HTML送信   ┌──────────────┐
+ │ Reactで │ ─────────&gt; │ &lt;button&gt;... │  ← 見た目はある
+ │ HTML生成│             │              │
+ └────────┘    JS送信    │  + React.js  │  ← まだ動かない
+              ─────────&gt; │              │
+                         │  ↓ ハイドレーション
+                         │ onClick 紐付け │  ← ここで動くようになる
+                         └──────────────┘</div>
+
+      <h4>起きていた不具合</h4>
+      <p>
+        ナビゲーションリンクから<strong>存在しないルート（404）</strong>に遷移したあとブラウザの戻るで戻ってきたとき、
+        ハンバーガーボタンが反応しなくなる。<code>onClick</code> ハンドラ自体が呼ばれない（<code>console.log</code> ですら出ない）。
+      </p>
+      <p>メカニズム：</p>
+      <ol>
+        <li>未実装ルート（例：<code>/study-logs</code>）への遷移 → Next.js 組み込みの 404 ページが表示される（<code>(protected)/layout.tsx</code> の外で描画される）</li>
+        <li>Header／NavLinks が<strong>アンマウント</strong>される</li>
+        <li>ブラウザ戻る → Next.js が RSC ペイロードキャッシュから<strong>ソフトナビゲーションで <code>/</code> を復元</strong></li>
+        <li>このとき Client Component の<strong>再ハイドレーションが完了せず</strong>、イベントハンドラが死んだままになる</li>
+      </ol>
+      <div class="callout">
+        <code>(protected)/not-found.tsx</code> を置いても解決しない。Next.js の仕様上、segment 配下の <code>not-found.tsx</code> は
+        <code>notFound()</code> 関数が明示的に呼ばれたときのみ発火し、未マッチ URL の 404 には適用されない
+        （ルートの <code>app/not-found.tsx</code> か実装済みページしか効かない）。
+      </div>
+
+      <h4>対策：未実装ページのスタブ化</h4>
+      <p>
+        ナビゲーションのリンク先となる Phase 1 のページが未実装だと上記の挙動を踏みやすい。中身は未実装でも
+        <strong>ルートとしては存在する</strong>状態にしておくのが安全。リンク先パスに対応する <code>page.tsx</code> を
+        「準備中」表示のスタブとして用意し、Header がアンマウントされる経路自体を塞ぐ。
+      </p>
+      <table>
+        <thead>
+          <tr><th>パス</th><th>スタブファイル</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>/study-logs</code></td>
+            <td><code>app/(protected)/study-logs/page.tsx</code></td>
+          </tr>
+          <tr>
+            <td><code>/subjects</code></td>
+            <td><code>app/(protected)/subjects/page.tsx</code></td>
+          </tr>
+          <tr>
+            <td><code>/reports/monthly</code></td>
+            <td><code>app/(protected)/reports/monthly/page.tsx</code></td>
+          </tr>
+          <tr>
+            <td><code>/batch-history</code></td>
+            <td><code>app/(protected)/batch-history/page.tsx</code></td>
+          </tr>
+        </tbody>
+      </table>
+
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ====== Section 3 ====== -->
+  <section class="section">
+    <div class="section-heading">
+      <div class="section-badge">3</div>
+      <h2>実装ファイル一覧</h2>
+    </div>
+    <div class="section-body">
+      <table>
+        <thead>
+          <tr><th>操作</th><th>ファイル</th><th>内容</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="op-new">新規作成</span></td>
+            <td><code>app/(protected)/_components/NavLinks.tsx</code></td>
+            <td>アクティブ状態 + モバイルメニューを担う Client Component</td>
+          </tr>
+          <tr>
+            <td><span class="op-upd">更新</span></td>
+            <td><code>app/(protected)/_components/Header.tsx</code></td>
+            <td>ナビゲーション部分を <code>NavLinks</code> に置き換える</td>
+          </tr>
+          <tr>
+            <td><span class="op-new">新規作成</span></td>
+            <td><code>app/(protected)/study-logs/page.tsx</code></td>
+            <td>§2.5 の対策スタブ。中身は「準備中」プレースホルダで OK</td>
+          </tr>
+          <tr>
+            <td><span class="op-new">新規作成</span></td>
+            <td><code>app/(protected)/subjects/page.tsx</code></td>
+            <td>§2.5 の対策スタブ</td>
+          </tr>
+          <tr>
+            <td><span class="op-new">新規作成</span></td>
+            <td><code>app/(protected)/reports/monthly/page.tsx</code></td>
+            <td>§2.5 の対策スタブ</td>
+          </tr>
+          <tr>
+            <td><span class="op-new">新規作成</span></td>
+            <td><code>app/(protected)/batch-history/page.tsx</code></td>
+            <td>§2.5 の対策スタブ</td>
+          </tr>
+          <tr>
+            <td><span class="op-new">新規作成</span></td>
+            <td><code>app/(protected)/_components/NavLinks.test.tsx</code></td>
+            <td>Jest + Testing Library によるアクティブ状態・メニュー開閉の単体テスト</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>E2E テスト（MOBILE-01 相当）は本イシューでは省略可。Issue #7 で構築した E2E 基盤を流用してモバイルビューでメニュー開閉を検証することも可能。</p>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ====== Section 4 ====== -->
+  <section class="section">
+    <div class="section-heading">
+      <div class="section-badge">4</div>
+      <h2>実装ステップ</h2>
+    </div>
+    <div class="section-body">
+
+      <!-- Step 1 -->
+      <div class="substep">
+        <div class="substep-heading">
+          <div class="substep-badge">1</div>
+          <h3><code>NavLinks.tsx</code> の作成</h3>
+        </div>
+        <div class="substep-body">
+          <p><code>app/(protected)/_components/NavLinks.tsx</code> を新規作成する。</p>
+          <pre><code><span class="cmt">// app/(protected)/_components/NavLinks.tsx</span>
+'use client'
+
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+import { useState, useEffect } from "react"
+import { FaBars, FaTimes } from "react-icons/fa"
+
+type NavItem = {
+    href: string
+    label: string
+    <span class="cmt">// アクティブ判定関数。階層下のページも含める場合は startsWith を使う</span>
+    isActive: (pathname: string) =&gt; boolean
+}
+
+const NAV_ITEMS: NavItem[] = [
+    { href: '/', label: 'ダッシュボード', isActive: (p) =&gt; p === '/' },
+    {
+        href: '/study-logs',
+        label: '学習ログ',
+        isActive: (p) =&gt; p === '/study-logs' || p.startsWith('/study-logs/'),
+    },
+    {
+        href: '/subjects',
+        label: '科目管理',
+        isActive: (p) =&gt; p === '/subjects' || p.startsWith('/subjects/'),
+    },
+    {
+        href: '/reports/monthly',
+        label: 'CSVダウンロード',
+        isActive: (p) =&gt; p.startsWith('/reports/monthly'),
+    },
+    {
+        href: '/batch-history',
+        label: 'バッチ履歴',
+        isActive: (p) =&gt; p.startsWith('/batch-history'),
+    },
+]
+
+const linkBase = 'transition-colors hover:text-gray-900'
+const linkActive = 'text-gray-900 font-semibold'
+const linkInactive = 'text-gray-600'
+
+export default function NavLinks() {
+    const pathname = usePathname()
+    const [open, setOpen] = useState(false)
+
+    <span class="cmt">// ルート変更時にドロワーを閉じる（React 19 "adjust state during render" パターン）</span>
+    const [prevPathname, setPrevPathname] = useState(pathname)
+    if (pathname !== prevPathname) {
+        setPrevPathname(pathname)
+        setOpen(false)
+    }
+
+    useEffect(() =&gt; {
+        if (!open) return
+        const onKey = (e: KeyboardEvent) =&gt; {
+            if (e.key === 'Escape') setOpen(false)
+        }
+        document.addEventListener('keydown', onKey)
+        return () =&gt; document.removeEventListener('keydown', onKey)
+    }, [open])
+
+    useEffect(() =&gt; {
+        if (!open) return
+        const onClickOutside = (e: MouseEvent) =&gt; {
+            const target = e.target as HTMLElement
+            if (target.closest('#mobile-nav') || target.closest('button[aria-controls="mobile-nav"]')) {
+                return
+            }
+            setOpen(false)
+        }
+        document.addEventListener('mousedown', onClickOutside)
+        return () =&gt; document.removeEventListener('mousedown', onClickOutside)
+    }, [open])
+
+    const renderLink = (item: NavItem, onClick?: () =&gt; void) =&gt; {
+        const active = item.isActive(pathname)
+        return (
+            &lt;Link
+                key={item.href}
+                href={item.href}
+                aria-current={active ? 'page' : undefined}
+                onClick={onClick}
+                className={`${linkBase} ${active ? linkActive : linkInactive}`}
+            &gt;
+                {item.label}
+            &lt;/Link&gt;
+        )
+    }
+
+    return (
+        &lt;&gt;
+            {/* PC 用: 横並びナビゲーション */}
+            &lt;nav
+                aria-label="メインナビゲーション"
+                className="hidden md:flex items-center gap-6 text-sm"
+            &gt;
+                {NAV_ITEMS.map((item) =&gt; renderLink(item))}
+            &lt;/nav&gt;
+
+            {/* モバイル用: ハンバーガーボタン */}
+            &lt;button
+                type="button"
+                aria-label={open ? 'メニューを閉じる' : 'メニューを開く'}
+                aria-expanded={open}
+                aria-controls="mobile-nav"
+                onClick={() =&gt; setOpen((prev) =&gt; !prev)}
+                className="md:hidden inline-flex items-center justify-center rounded-full p-2 text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer"
+            &gt;
+                {open ? &lt;FaTimes className="h-5 w-5" /&gt; : &lt;FaBars className="h-5 w-5" /&gt;}
+            &lt;/button&gt;
+
+            {/* モバイル用: ドロワー（hidden 属性で常に DOM に存在させる） */}
+            &lt;nav
+                id="mobile-nav"
+                aria-label="モバイルナビゲーション"
+                hidden={!open}
+                className="absolute left-0 right-0 top-full md:hidden
+                    flex flex-col gap-1 border-b bg-white px-6 py-3 text-sm shadow-sm"
+            &gt;
+                {NAV_ITEMS.map((item) =&gt;
+                    renderLink(item, () =&gt; setOpen(false)),
+                )}
+            &lt;/nav&gt;
+        &lt;/&gt;
+    )
+}</code></pre>
+
+          <p><strong>ポイント：</strong></p>
+          <ul>
+            <li><code>'use client'</code> を先頭に書く（<code>usePathname</code> / <code>useState</code> / <code>useEffect</code> は Client Component 専用）</li>
+            <li><code>NAV_ITEMS</code> をモジュールトップに置いて再レンダリングごとに再生成しないようにする</li>
+            <li>アクティブ判定はリンクごとに関数で持つ。<code>/</code> のような厳密一致と、子パスを含む <code>startsWith</code> 判定を 1 箇所で表現できる</li>
+            <li>アクセシビリティ：<code>aria-current="page"</code> / <code>aria-expanded</code> / <code>aria-controls</code> を付与。PC・モバイル両 <code>&lt;nav&gt;</code> に <code>aria-label</code> を付与</li>
+            <li>ドロワーは <code>{open &amp;&amp; (...)}</code> の条件付きレンダリングではなく <code>hidden={!open}</code> を使う（<code>aria-controls</code> の参照先が常に DOM に存在する必要があるため）</li>
+            <li>ルート変更・ESC・ドロワー外クリックのクローズ処理を <code>useEffect</code> と <code>prevPathname</code> パターンで実装</li>
+            <li>モバイルドロワーの位置決めは <code>absolute left-0 right-0 top-full</code> で Header 直下に出す。Header 側は <code>relative</code> を付ける（次ステップ）</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="sub-hr"></div>
+
+      <!-- Step 2 -->
+      <div class="substep">
+        <div class="substep-heading">
+          <div class="substep-badge">2</div>
+          <h3><code>Header.tsx</code> の更新</h3>
+        </div>
+        <div class="substep-body">
+          <p>既存のナビゲーション部分を <code>NavLinks</code> に置き換える。<code>relative</code> クラスを追加してドロワーの <code>absolute</code> 配置の基準にする。</p>
+          <pre><code><span class="cmt">// app/(protected)/_components/Header.tsx</span>
+import Image from "next/image";
+import Link from "next/link";
+
+import NavLinks from "./NavLinks";
+
+import { auth, signOut } from "@/auth";
+
+export default async function Header() {
+  const session = await auth();
+
+  return (
+    &lt;header
+      className="relative flex items-center justify-between gap-4
+        px-6 py-3 border-b bg-white shadow-sm"
+    &gt;
+      &lt;Link href="/" className="text-lg font-bold text-gray-900"&gt;
+        STUDY LOG
+      &lt;/Link&gt;
+
+      &lt;NavLinks /&gt;
+
+      &lt;div className="flex items-center gap-3"&gt;
+        {session?.user?.image &amp;&amp; (
+          &lt;Image
+            src={session.user.image}
+            alt={session.user.name ?? "ユーザー"}
+            width={32}
+            height={32}
+            className="rounded-full"
+          /&gt;
+        )}
+        &lt;span className="hidden sm:inline text-sm text-gray-700"&gt;
+          {session?.user?.name}
+        &lt;/span&gt;
+
+        {/* Server Action でサインアウトを呼び出す */}
+        &lt;form
+          action={async () =&gt; {
+            "use server";
+            await signOut({ redirectTo: "/login" });
+          }}
+        &gt;
+          &lt;button
+            type="submit"
+            className="rounded-md border border-gray-300 px-3 py-1 text-sm
+              text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer"
+          &gt;
+            ログアウト
+          &lt;/button&gt;
+        &lt;/form&gt;
+      &lt;/div&gt;
+    &lt;/header&gt;
+  );
+}</code></pre>
+
+          <p><strong>変更点：</strong></p>
+          <table>
+            <thead>
+              <tr><th>箇所</th><th>変更内容</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>&lt;header&gt;</code> のクラス</td>
+                <td><code>relative</code> と <code>gap-4</code> を追加（モバイルドロワーの基準点・要素間余白）</td>
+              </tr>
+              <tr>
+                <td>旧 <code>&lt;nav&gt;</code> ブロック</td>
+                <td><code>&lt;NavLinks /&gt;</code> に置き換え</td>
+              </tr>
+              <tr>
+                <td>ユーザー名 <code>&lt;span&gt;</code> のクラス</td>
+                <td><code>hidden sm:inline</code> を追加（モバイルで横幅を節約。アイコンは残す）</td>
+              </tr>
+            </tbody>
+          </table>
+          <p>ロゴ・ユーザー情報・ログアウトボタンは Server Component のままなので、ログアウトの Server Action もそのまま動く。</p>
+        </div>
+      </div>
+
+      <div class="sub-hr"></div>
+
+      <!-- Step 3 -->
+      <div class="substep">
+        <div class="substep-heading">
+          <div class="substep-badge">3</div>
+          <h3>リンク先ページのスタブを作成</h3>
+        </div>
+        <div class="substep-body">
+          <p>
+            §2.5 のとおり、ナビゲーションのリンク先パスが未実装のままだと、404 → 戻る操作でハイドレーションが壊れドロワーが動かなくなる。
+            Phase 1 で実装予定のページに対応する <code>page.tsx</code> を「準備中」表示のスタブとして 4 つ作成し、ルートとしては存在する状態にしておく。
+          </p>
+          <pre><code><span class="cmt">// app/(protected)/study-logs/page.tsx</span>
+export default function StudyLogsPage() {
+  return &lt;div&gt;学習ログ（準備中）&lt;/div&gt;;
+}</code></pre>
+          <pre><code><span class="cmt">// app/(protected)/subjects/page.tsx</span>
+export default function SubjectsPage() {
+  return &lt;div&gt;科目管理（準備中）&lt;/div&gt;;
+}</code></pre>
+          <pre><code><span class="cmt">// app/(protected)/reports/monthly/page.tsx</span>
+export default function MonthlyReportPage() {
+  return &lt;div&gt;CSVダウンロード（準備中）&lt;/div&gt;;
+}</code></pre>
+          <pre><code><span class="cmt">// app/(protected)/batch-history/page.tsx</span>
+export default function BatchHistoryPage() {
+  return &lt;div&gt;バッチ履歴（準備中）&lt;/div&gt;;
+}</code></pre>
+          <p>各ページは後続のフェーズで本実装に置き換える。今は<strong>ルートを存在させること</strong>が目的。</p>
+        </div>
+      </div>
+
+      <div class="sub-hr"></div>
+
+      <!-- Step 4 -->
+      <div class="substep">
+        <div class="substep-heading">
+          <div class="substep-badge">4</div>
+          <h3>単体テスト（任意だが推奨）</h3>
+        </div>
+        <div class="substep-body">
+          <p><code>NavLinks</code> は分岐ロジックを持つため Jest + Testing Library で検証する。</p>
+          <h4><code>app/(protected)/_components/NavLinks.test.tsx</code></h4>
+          <pre><code><span class="cmt">// app/(protected)/_components/NavLinks.test.tsx</span>
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+
+import NavLinks from './NavLinks'
+
+<span class="cmt">// usePathname のモック</span>
+const mockPathname = jest.fn&lt;string, []&gt;()
+jest.mock('next/navigation', () =&gt; ({
+    usePathname: () =&gt; mockPathname(),
+}))
+
+describe('NavLinks', () =&gt; {
+    beforeEach(() =&gt; {
+        mockPathname.mockReset()
+    })
+
+    test('現在のパスに対応するリンクに aria-current="page"が付与される', () =&gt; {
+        mockPathname.mockReturnValue('/study-logs')
+        render(&lt;NavLinks /&gt;)
+
+        const activeLinks = screen.getAllByRole('link', { name: '学習ログ' })
+        <span class="cmt">// PC 用 nav とモバイル用 nav 両方にレンダリングされるため getAllByRole で確認</span>
+        expect(activeLinks[0]).toHaveAttribute('aria-current', 'page')
+
+        const inactiveLinks = screen.getAllByRole('link', { name: 'ダッシュボード' })
+        expect(inactiveLinks[0]).not.toHaveAttribute('aria-current')
+    })
+
+    test('子パスでも親リンクがアクティブになる', () =&gt; {
+        mockPathname.mockReturnValue('/study-logs/new')
+        render(&lt;NavLinks /&gt;)
+
+        const activeLinks = screen.getAllByRole('link', { name: '学習ログ' })
+        expect(activeLinks[0]).toHaveAttribute('aria-current', 'page')
+    })
+
+    test('ダッシュボードは厳密一致のみアクティブ', () =&gt; {
+        mockPathname.mockReturnValue('/study-logs')
+        render(&lt;NavLinks /&gt;)
+
+        const dashboardLinks = screen.getAllByRole('link', { name: 'ダッシュボード' })
+        expect(dashboardLinks[0]).not.toHaveAttribute('aria-current')
+    })
+
+    test('ハンバーガーボタンを押すとモバイルナビが開閉する', async () =&gt; {
+        const user = userEvent.setup()
+        mockPathname.mockReturnValue('/')
+        render(&lt;NavLinks /&gt;)
+
+        <span class="cmt">// 初期状態: モバイルナビは閉じている</span>
+        const toggle = screen.getByRole('button', { name: 'メニューを開く' })
+        expect(toggle).toHaveAttribute('aria-expanded', 'false')
+
+        <span class="cmt">// 開く</span>
+        await user.click(toggle)
+        expect(screen.getByRole('button', { name: 'メニューを閉じる' })).toHaveAttribute(
+            'aria-expanded',
+            'true',
+        )
+
+        <span class="cmt">// 閉じる</span>
+        await user.click(screen.getByRole('button', { name: 'メニューを閉じる' }))
+        expect(screen.getByRole('button', { name: 'メニューを開く' })).toHaveAttribute(
+            'aria-expanded',
+            'false',
+        )
+    })
+
+    test('ESCキーでドロワーが閉じる', async () =&gt; {
+        const user = userEvent.setup()
+        mockPathname.mockReturnValue('/')
+        render(&lt;NavLinks /&gt;)
+
+        await user.click(screen.getByRole('button', { name: 'メニューを開く' }))
+        expect(screen.getByRole('button', { name: 'メニューを閉じる' })).toBeInTheDocument()
+
+        await user.keyboard('{Escape}')
+        expect(screen.getByRole('button', { name: 'メニューを開く' })).toBeInTheDocument()
+    })
+
+    test('ルート変更時にドロワーが閉じる', async () =&gt; {
+        const user = userEvent.setup()
+        mockPathname.mockReturnValue('/')
+        <span class="cmt">// render() の戻り値から再レンダリング関数（rerender）を取り出す</span>
+        const { rerender } = render(&lt;NavLinks /&gt;)
+
+        await user.click(screen.getByRole('button', { name: 'メニューを開く' }))
+        expect(screen.getByRole('button', { name: 'メニューを閉じる' })).toBeInTheDocument()
+
+        <span class="cmt">// パスを変えて再レンダリング → prevPathname パターンでドロワーが閉じる</span>
+        mockPathname.mockReturnValue('/study-logs')
+        rerender(&lt;NavLinks /&gt;)
+        expect(screen.getByRole('button', { name: 'メニューを開く' })).toBeInTheDocument()
+    })
+})</code></pre>
+          <div class="callout">
+            <code>@testing-library/user-event</code> が <code>package.json</code> に未追加なら
+            <code>npm install --save-dev @testing-library/user-event</code> を実行する。既に追加済みであれば不要。
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ====== Section 5 ====== -->
+  <section class="section">
+    <div class="section-heading">
+      <div class="section-badge">5</div>
+      <h2>動作確認手順</h2>
+    </div>
+    <div class="section-body">
+
+      <h4>5.1 ローカルでの手動確認</h4>
+      <pre><code>npm run dev</code></pre>
+      <table>
+        <thead>
+          <tr><th>#</th><th>操作</th><th>期待結果</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td><code>/</code> を開く</td>
+            <td>「ダッシュボード」リンクが太字 + 濃いグレーで表示される</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td>「学習ログ」をクリック</td>
+            <td>スタブ「学習ログ（準備中）」が表示され、リンクが太字になる</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td>DevTools でビューポートを 375px に切り替え</td>
+            <td>ナビゲーションが消え、ハンバーガーアイコンが表示される</td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td>ハンバーガーアイコンをクリック</td>
+            <td>ヘッダー直下にリンクが縦並びで表示される（アイコンが × に変わる）</td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td>リンクをクリック</td>
+            <td>メニューが閉じ、対象ページへ遷移する</td>
+          </tr>
+          <tr>
+            <td>6</td>
+            <td>任意のリンクで遷移 → ブラウザ戻る → ハンバーガーを開く</td>
+            <td>§2.5 の再現確認。スタブを作っていればドロワーが正常に開く</td>
+          </tr>
+          <tr>
+            <td>7</td>
+            <td>キーボードで Tab → Enter で操作</td>
+            <td>ハンバーガーがフォーカス可能で、Enter で開閉できる</td>
+          </tr>
+          <tr>
+            <td>8</td>
+            <td>スクリーンリーダー（または DevTools の Accessibility パネル）確認</td>
+            <td><code>aria-current="page"</code> / <code>aria-expanded</code> が正しく反映されている</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h4>5.2 自動テスト</h4>
+      <pre><code><span class="cmt"># 単体テスト</span>
+npm test -- NavLinks
+
+<span class="cmt"># 既存テスト全体の回帰確認</span>
+npm test</code></pre>
+
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ====== Section 6 ====== -->
+  <section class="section">
+    <div class="section-heading">
+      <div class="section-badge">6</div>
+      <h2>実装チェックリスト</h2>
+    </div>
+    <div class="section-body">
+      <ul class="checklist-items">
+        <li><span class="check-icon">✓</span><span><code>app/(protected)/_components/NavLinks.tsx</code> を新規作成</span></li>
+        <li><span class="check-icon">✓</span><span><code>app/(protected)/_components/Header.tsx</code> を更新（<code>NavLinks</code> を組み込み、<code>relative</code> を付与）</span></li>
+        <li><span class="check-icon">✓</span><span>§2.5 のスタブ 4 ファイルを新規作成（<code>study-logs</code> / <code>subjects</code> / <code>reports/monthly</code> / <code>batch-history</code>）</span></li>
+        <li><span class="check-icon">✓</span><span>PC ビューでアクティブ状態が正しく反映される</span></li>
+        <li><span class="check-icon">✓</span><span>モバイルビューでハンバーガーメニューが開閉する</span></li>
+        <li><span class="check-icon">✓</span><span>ナビゲーション遷移 → ブラウザ戻るの後でもハンバーガーが反応する（§2.5 の再現確認）</span></li>
+        <li><span class="check-icon">✓</span><span>アクティブリンクに <code>aria-current="page"</code> が付く</span></li>
+        <li><span class="check-icon">✓</span><span>ハンバーガーボタンに <code>aria-label</code> / <code>aria-expanded</code> / <code>aria-controls</code> が付く</span></li>
+        <li><span class="check-icon-todo"></span><span><code>NavLinks.test.tsx</code> を新規作成しグリーン（任意）</span></li>
+        <li><span class="check-icon-todo"></span><span>既存の E2E（<code>logout.spec.ts</code>）がリグレッションなくグリーン</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ====== Section 7 ====== -->
+  <section class="section">
+    <div class="section-heading">
+      <div class="section-badge">7</div>
+      <h2>参考</h2>
+    </div>
+    <div class="section-body">
+      <ul>
+        <li>画面定義書 §3.1 ヘッダー</li>
+        <li>Next.js 16 公式：usePathname — Server Component の Layout に Client な NavLinks を埋め込むパターン</li>
+        <li>Issue #7 実装手順書 <code>doc/impl/issue-7-logout.html</code> — Header の Server Component 構造の前提</li>
+      </ul>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>
